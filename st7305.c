@@ -15,17 +15,20 @@
 #include <linux/spi/spi.h>
 #include <video/mipi_display.h>
 
+#include <drm/drm_drv.h>
+#include <drm/drm_device.h>
+#include <drm/drm_managed.h>
+#include <drm/drm_framebuffer.h>
+#include <drm/drm_fbdev_dma.h>
+#include <drm/drm_probe_helper.h>
+#include <drm/drm_mipi_dbi.h>
+#include <drm/drm_format_helper.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_damage_helper.h>
-#include <drm/drm_drv.h>
-#include <drm/drm_fb_cma_helper.h>
-#include <drm/drm_fb_helper.h>
-#include <drm/drm_format_helper.h>
-#include <drm/drm_gem_cma_helper.h>
+#include <drm/drm_gem_dma_helper.h>
+#include <drm/drm_simple_kms_helper.h>
+#include <drm/drm_gem_atomic_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
-#include <drm/drm_managed.h>
-#include <drm/drm_mipi_dbi.h>
-#include <drm/drm_rect.h>
 
 struct st7305 {
 	struct mipi_dbi_dev *dbidev;
@@ -66,10 +69,6 @@ static const u8 dgram_lut[256] = {
 	0xAF, 0xEF, 0xBF, 0xFF
 };
 
-static u8 *g_st7305_dgram = NULL;
-
-static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect);
-
 /*
  * The device tree node may specify the wrong GPIO
  * active behavior, hard-coded as low active here
@@ -91,14 +90,7 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 			       struct drm_plane_state *plane_state)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(pipe->crtc.dev);
-	struct drm_framebuffer *fb = plane_state->fb;
 	struct mipi_dbi *dbi = &dbidev->dbi;
-	struct drm_rect rect = {
-		.x1 = 0,
-		.x2 = fb->width,
-		.y1 = 0,
-		.y2 = fb->height,
-	};
 	int idx;
 
 	if (!drm_dev_enter(pipe->crtc.dev, &idx))
@@ -107,6 +99,9 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	DRM_DEBUG_KMS("\n");
 
 	st7305_reset(dbi);
+
+	mipi_dbi_command(dbi, MIPI_DCS_SOFT_RESET);
+	msleep(10);
 
 	mipi_dbi_command(dbi, 0xD6, 0x13, 0x02); // NVM Load Control
 	mipi_dbi_command(dbi, 0xD1, 0x01); // Booster Enable
@@ -149,8 +144,6 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	mipi_dbi_command(dbi, 0xD0, 0xFF); // Auto power down
 	mipi_dbi_command(dbi, 0x38); // High Power Mode on
 	mipi_dbi_command(dbi, MIPI_DCS_SET_DISPLAY_ON);
-
-	st7305_fb_dirty(fb, &rect);
 
 	drm_dev_exit(idx);
 }
@@ -197,10 +190,10 @@ static void __maybe_unused st7305_convert_buffer(u8 *dst, void *vaddr,
 	}
 }
 
-static void st7305_convert_buffer_lut(u8 *dst, void *vaddr,
+static void st7305_convert_buffer_lut(u8 *dst, void *buf,
 				      struct drm_framebuffer *fb)
 {
-	u8 *buf8 = vaddr;
+	u8 *buf8 = buf;
 	int h = 384;
 	u16 y, i, j, k = 0;
 	u8 b1, b2;
@@ -259,69 +252,70 @@ static inline void st7305_put_pixel(int x, int y, u8 *dgram, u8 gray,
 		dgram[byte_idx] &= ~bit_mask;
 }
 
-static void st7305_xrgb8888_to_monochrome(u8 *dst, void *vaddr,
-					  struct drm_framebuffer *fb,
-					  struct drm_rect *clip)
+static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
+				    struct drm_framebuffer *fb,
+				    struct drm_rect *clip,
+				    struct drm_format_conv_state *fmtcnv_state)
 {
 	size_t len = (clip->x2 - clip->x1) * (clip->y2 - clip->y1);
 	unsigned int x, y;
-	u8 *buf;
+	u8 *src, *buf, *convert_buf;
+	struct iosys_map dst_map, vmap;
 
 	buf = kmalloc(len, GFP_KERNEL);
 	if (!buf)
 		return;
 
-	drm_fb_xrgb8888_to_gray8(buf, vaddr, fb, clip);
+	convert_buf = kzalloc(384 * 21, GFP_KERNEL);
+	if (!convert_buf)
+		return;
+
+	iosys_map_set_vaddr(&dst_map, buf);
+	iosys_map_set_vaddr(&vmap, vaddr);
+	drm_fb_xrgb8888_to_gray8(&dst_map, NULL, &vmap, fb, clip, fmtcnv_state);
+	src = buf;
 
 	for (y = clip->y1; y < clip->y2; y++)
 		for (x = clip->x1; x < clip->x2; x++)
-			st7305_put_pixel(x, y, g_st7305_dgram, *buf++, fb, 3);
+			st7305_put_pixel(x, y, convert_buf, *src++, fb, 3);
 
-	st7305_convert_buffer_lut(dst, g_st7305_dgram, fb);
+	st7305_convert_buffer_lut(dst, convert_buf, fb);
 
+	kfree(convert_buf);
 	kfree(buf);
 }
 
-static int st7305_buf_copy(void *dst, struct drm_framebuffer *fb,
-			   struct drm_rect *clip)
+static int st7305_buf_copy(void *dst, struct iosys_map *src,
+			   struct drm_framebuffer *fb, struct drm_rect *clip,
+			   struct drm_format_conv_state *fmtcnv_state)
 {
-	struct drm_gem_cma_object *cma_obj = drm_fb_cma_get_gem_obj(fb, 0);
-	struct dma_buf_attachment *import_attach = cma_obj->base.import_attach;
-	void *src = cma_obj->vaddr;
-	int ret = 0;
+	int ret;
 
-	if (import_attach) {
-		ret = dma_buf_begin_cpu_access(import_attach->dmabuf,
-					       DMA_FROM_DEVICE);
-		if (ret)
-			return ret;
-	}
+	ret = drm_gem_fb_begin_cpu_access(fb, DMA_FROM_DEVICE);
+	if (ret)
+		return ret;
 
-	st7305_xrgb8888_to_monochrome(dst, src, fb, clip);
+	st7305_xrgb8888_to_mono(dst, src->vaddr, fb, clip, fmtcnv_state);
 
-	if (import_attach)
-		ret = dma_buf_end_cpu_access(import_attach->dmabuf,
-					     DMA_FROM_DEVICE);
+	ret = drm_gem_fb_begin_cpu_access(fb, DMA_FROM_DEVICE);
 
 	return ret;
 }
 
-static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
+static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
+			    struct drm_rect *rect,
+			    struct drm_format_conv_state *fmtcnv_state)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
 	u8 caset[] = { 0x17, 0x17 + 14 - 1 };
 	u8 raset[] = { 0x00, 0x00 + 192 - 1 };
 	int ret = 0;
-	int idx;
-
-	if (!drm_dev_enter(fb->dev, &idx))
-		return;
 
 	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
 		      DRM_RECT_ARG(rect));
 
-	ret = st7305_buf_copy(dbidev->tx_buf, fb, rect);
+	ret = st7305_buf_copy(dbidev->tx_buf, src, fb, rect, fmtcnv_state);
 	if (ret)
 		goto err_msg;
 
@@ -335,21 +329,29 @@ err_msg:
 	if (ret)
 		dev_err_once(fb->dev->dev, "Failed to update display %d\n",
 			     ret);
-
-	drm_dev_exit(idx);
 }
 
 static void st7305_pipe_update(struct drm_simple_display_pipe *pipe,
 			       struct drm_plane_state *old_state)
 {
 	struct drm_plane_state *state = pipe->plane.state;
+	struct drm_shadow_plane_state *shadow_plane_state =
+		to_drm_shadow_plane_state(state);
+	struct drm_framebuffer *fb = state->fb;
 	struct drm_rect rect;
+	int idx;
 
 	if (!pipe->crtc.state->active)
 		return;
 
+	if (!drm_dev_enter(fb->dev, &idx))
+		return;
+
 	if (drm_atomic_helper_damage_merged(old_state, state, &rect))
-		st7305_fb_dirty(state->fb, &rect);
+		st7305_fb_dirty(&shadow_plane_state->data[0], fb, &rect,
+				&shadow_plane_state->fmtcnv_state);
+
+	drm_dev_exit(idx);
 }
 
 static const u32 st7305_formats[] = {
@@ -357,22 +359,27 @@ static const u32 st7305_formats[] = {
 };
 
 static const struct drm_simple_display_pipe_funcs st7305_pipe_funcs = {
+	.mode_valid = mipi_dbi_pipe_mode_valid,
 	.enable = st7305_pipe_enable,
 	.disable = st7305_pipe_disable,
 	.update = st7305_pipe_update,
-	.prepare_fb = drm_gem_fb_simple_display_pipe_prepare_fb,
+	.begin_fb_access = mipi_dbi_pipe_begin_fb_access,
+	.end_fb_access = mipi_dbi_pipe_end_fb_access,
+	.reset_plane = mipi_dbi_pipe_reset_plane,
+	.duplicate_plane_state = mipi_dbi_pipe_duplicate_plane_state,
+	.destroy_plane_state = mipi_dbi_pipe_destroy_plane_state,
 };
 
 static const struct drm_display_mode st7305_mode = {
 	DRM_SIMPLE_MODE(168, 384, 55, 90),
 };
 
-DEFINE_DRM_GEM_CMA_FOPS(st7305_fops);
+DEFINE_DRM_GEM_DMA_FOPS(st7305_fops);
 
 static struct drm_driver st7305_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
 	.fops = &st7305_fops,
-	DRM_GEM_CMA_DRIVER_OPS_VMAP,
+	DRM_GEM_DMA_DRIVER_OPS_VMAP,
 	.debugfs_init = mipi_dbi_debugfs_init,
 	.name = "st7305",
 	.desc = "Sitronix ST7305",
@@ -382,7 +389,7 @@ static struct drm_driver st7305_driver = {
 };
 
 static const struct of_device_id st7305_of_match[] = {
-	{ .compatible = "sitronix,st7567" },
+	{ .compatible = "sitronix,st7305" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, st7305_of_match);
@@ -403,14 +410,6 @@ static int st7305_probe(struct spi_device *spi)
 	u32 rotation = 0;
 	size_t bufsize;
 	int ret;
-
-	// bufsize = (192) * 14 * 3;
-	bufsize = (384 * 21);
-	g_st7305_dgram = kzalloc(bufsize, GFP_KERNEL);
-	if (!g_st7305_dgram) {
-		dev_err(dev, "Failed to allocate memory for g_st7305_dgram\n");
-		return -ENOMEM;
-	}
 
 	dbidev = devm_drm_dev_alloc(dev, &st7305_driver, struct mipi_dbi_dev,
 				    drm);
@@ -467,26 +466,17 @@ static int st7305_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, drm);
 
-	drm_fbdev_generic_setup(drm, 0);
+	drm_fbdev_dma_setup(drm, 0);
 
 	return 0;
 }
 
-static int st7305_remove(struct spi_device *spi)
+static void st7305_remove(struct spi_device *spi)
 {
 	struct drm_device *drm = spi_get_drvdata(spi);
 
-	printk("%s\n", __func__);
-
 	drm_dev_unplug(drm);
 	drm_atomic_helper_shutdown(drm);
-
-	if (g_st7305_dgram) {
-		kfree(g_st7305_dgram);
-		g_st7305_dgram = NULL;
-	}
-
-	return 0;
 }
 
 static void st7305_shutdown(struct spi_device *spi)
