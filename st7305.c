@@ -35,38 +35,12 @@ struct st7305 {
 	struct drm_devie *drm;
 
 	struct gpio_desc *dc;
-	u8 *dgram;
 };
 
 struct st7305_panel_desc {
 	const struct drm_display_mode *mode;
 
 	int (*init_seq)(struct st7305 *st7305);
-};
-
-static const u8 dgram_lut[256] = {
-	0x00, 0x40, 0x10, 0x50, 0x04, 0x44, 0x14, 0x54, 0x01, 0x41, 0x11, 0x51,
-	0x05, 0x45, 0x15, 0x55, 0x80, 0xC0, 0x90, 0xD0, 0x84, 0xC4, 0x94, 0xD4,
-	0x81, 0xC1, 0x91, 0xD1, 0x85, 0xC5, 0x95, 0xD5, 0x20, 0x60, 0x30, 0x70,
-	0x24, 0x64, 0x34, 0x74, 0x21, 0x61, 0x31, 0x71, 0x25, 0x65, 0x35, 0x75,
-	0xA0, 0xE0, 0xB0, 0xF0, 0xA4, 0xE4, 0xB4, 0xF4, 0xA1, 0xE1, 0xB1, 0xF1,
-	0xA5, 0xE5, 0xB5, 0xF5, 0x08, 0x48, 0x18, 0x58, 0x0C, 0x4C, 0x1C, 0x5C,
-	0x09, 0x49, 0x19, 0x59, 0x0D, 0x4D, 0x1D, 0x5D, 0x88, 0xC8, 0x98, 0xD8,
-	0x8C, 0xCC, 0x9C, 0xDC, 0x89, 0xC9, 0x99, 0xD9, 0x8D, 0xCD, 0x9D, 0xDD,
-	0x28, 0x68, 0x38, 0x78, 0x2C, 0x6C, 0x3C, 0x7C, 0x29, 0x69, 0x39, 0x79,
-	0x2D, 0x6D, 0x3D, 0x7D, 0xA8, 0xE8, 0xB8, 0xF8, 0xAC, 0xEC, 0xBC, 0xFC,
-	0xA9, 0xE9, 0xB9, 0xF9, 0xAD, 0xED, 0xBD, 0xFD, 0x02, 0x42, 0x12, 0x52,
-	0x06, 0x46, 0x16, 0x56, 0x03, 0x43, 0x13, 0x53, 0x07, 0x47, 0x17, 0x57,
-	0x82, 0xC2, 0x92, 0xD2, 0x86, 0xC6, 0x96, 0xD6, 0x83, 0xC3, 0x93, 0xD3,
-	0x87, 0xC7, 0x97, 0xD7, 0x22, 0x62, 0x32, 0x72, 0x26, 0x66, 0x36, 0x76,
-	0x23, 0x63, 0x33, 0x73, 0x27, 0x67, 0x37, 0x77, 0xA2, 0xE2, 0xB2, 0xF2,
-	0xA6, 0xE6, 0xB6, 0xF6, 0xA3, 0xE3, 0xB3, 0xF3, 0xA7, 0xE7, 0xB7, 0xF7,
-	0x0A, 0x4A, 0x1A, 0x5A, 0x0E, 0x4E, 0x1E, 0x5E, 0x0B, 0x4B, 0x1B, 0x5B,
-	0x0F, 0x4F, 0x1F, 0x5F, 0x8A, 0xCA, 0x9A, 0xDA, 0x8E, 0xCE, 0x9E, 0xDE,
-	0x8B, 0xCB, 0x9B, 0xDB, 0x8F, 0xCF, 0x9F, 0xDF, 0x2A, 0x6A, 0x3A, 0x7A,
-	0x2E, 0x6E, 0x3E, 0x7E, 0x2B, 0x6B, 0x3B, 0x7B, 0x2F, 0x6F, 0x3F, 0x7F,
-	0xAA, 0xEA, 0xBA, 0xFA, 0xAE, 0xEE, 0xBE, 0xFE, 0xAB, 0xEB, 0xBB, 0xFB,
-	0xAF, 0xEF, 0xBF, 0xFF
 };
 
 /*
@@ -135,7 +109,7 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	msleep(120);
 
 	mipi_dbi_command(dbi, 0xC9, 0x00); // Source Voltage Select
-	mipi_dbi_command(dbi, 0x36, 0x00); // Memory Data Access Control
+	mipi_dbi_command(dbi, 0x36, BIT(6) | BIT(3)); // Memory Data Access Control
 	mipi_dbi_command(dbi, 0x3A, 0x11); // Data Format Select
 	mipi_dbi_command(dbi, 0xB9, 0x20); // Gamma Mode Setting
 	mipi_dbi_command(dbi, 0xB8, 0x29); // Panel Setting
@@ -156,100 +130,14 @@ static void st7305_pipe_disable(struct drm_simple_display_pipe *pipe)
 	mipi_dbi_command(dbi, MIPI_DCS_SET_DISPLAY_OFF);
 }
 
-static inline u8 __pack_byte(u8 b1, u8 b2)
+static inline void st7305_draw_pixel(u8 *dst, uint x, uint y, u8 gray)
 {
-	u8 mix = 0;
-	mix |= ((b1 & 0x01) << 7) | ((b2 & 0x01) << 6);
-	mix |= ((b1 & 0x02) << 4) | ((b2 & 0x02) << 3);
-	mix |= ((b1 & 0x04) << 1) | ((b2 & 0x04) << 0);
-	mix |= ((b1 & 0x08) >> 2) | ((b2 & 0x08) >> 3);
-	return mix;
-}
+	u32 byte_index = ((y >> 1) * 42) + (x >> 2);
+	u32 bit_index = ((x & 3) << 1) | (y & 1);
+	u8 mask = 1u << (7 - bit_index);
+	u8 set = (gray >> 7) * mask;
 
-static void __maybe_unused st7305_convert_buffer(u8 *dst, void *vaddr,
-						 struct drm_framebuffer *fb)
-{
-	u8 *buf8 = vaddr;
-	int h = 384;
-	u16 y, i, j, k = 0;
-	u8 b1, b2;
-
-	for (i = 0; i < h; i += 2) {
-		// Convert 2 columns
-		for (j = 0; j < 21; j += 3) {
-			for (y = 0; y < 3; y++) {
-				b1 = buf8[(j + y) * h + i];
-				b2 = buf8[(j + y) * h + i + 1];
-
-				// First 4 bits
-				dst[k++] = __pack_byte(b1, b2);
-				// Second 4 bits
-				dst[k++] = __pack_byte(b1 >> 4, b2 >> 4);
-			}
-		}
-	}
-}
-
-static void st7305_convert_buffer_lut(u8 *dst, void *buf,
-				      struct drm_framebuffer *fb)
-{
-	u8 *buf8 = buf;
-	int h = 384;
-	u16 y, i, j, k = 0;
-	u8 b1, b2;
-
-	for (i = 0; i < h; i += 2) {
-		// Convert 2 columns
-		for (j = 0; j < 21; j += 3) {
-			for (y = 0; y < 3; y++) {
-				b1 = buf8[(j + y) * h + i];
-				b2 = buf8[(j + y) * h + i + 1];
-
-				dst[k++] = dgram_lut[((b1 & 0x0F) << 4) |
-						     (b2 & 0x0F)];
-
-				b1 >>= 4;
-				b2 >>= 4;
-				dst[k++] = dgram_lut[((b1 & 0x0F) << 4) |
-						     (b2 & 0x0F)];
-			}
-		}
-	}
-}
-
-static inline void st7305_put_pixel(int x, int y, u8 *dgram, u8 gray,
-				    struct drm_framebuffer *fb, u8 rotation)
-{
-	int w = fb->width;
-	int h = fb->height;
-	u8 new_x = x, new_y = y;
-	u16 byte_idx;
-	u8 bit_mask;
-
-	switch (rotation) {
-	case 1: // 90 degrees clockwise
-		new_x = h - y;
-		new_y = x;
-		break;
-	case 2: // 180 degrees
-		new_x = w - x;
-		new_y = h - y;
-		break;
-	case 3: // 270 degrees clockwise
-		new_x = y;
-		new_y = w - x;
-		break;
-	default: // 0 degrees
-		break;
-	}
-
-	byte_idx = (new_y >> 3) * h + new_x;
-	bit_mask = BIT(new_y & 0x7);
-
-	if (gray > 128)
-		dgram[byte_idx] |= bit_mask;
-	else
-		dgram[byte_idx] &= ~bit_mask;
+	dst[byte_index] = (dst[byte_index] & ~mask) | set;
 }
 
 static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
@@ -258,16 +146,12 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 				    struct drm_format_conv_state *fmtcnv_state)
 {
 	size_t len = (clip->x2 - clip->x1) * (clip->y2 - clip->y1);
-	unsigned int x, y;
-	u8 *src, *buf, *convert_buf;
 	struct iosys_map dst_map, vmap;
+	unsigned int x, y;
+	u8 *src, *buf;
 
 	buf = kmalloc(len, GFP_KERNEL);
 	if (!buf)
-		return;
-
-	convert_buf = kzalloc(384 * 21, GFP_KERNEL);
-	if (!convert_buf)
 		return;
 
 	iosys_map_set_vaddr(&dst_map, buf);
@@ -277,11 +161,8 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 
 	for (y = clip->y1; y < clip->y2; y++)
 		for (x = clip->x1; x < clip->x2; x++)
-			st7305_put_pixel(x, y, convert_buf, *src++, fb, 3);
+			st7305_draw_pixel(dst, x, y, *src++);
 
-	st7305_convert_buffer_lut(dst, convert_buf, fb);
-
-	kfree(convert_buf);
 	kfree(buf);
 }
 
@@ -308,8 +189,6 @@ static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
-	u8 caset[] = { 0x17, 0x17 + 14 - 1 };
-	u8 raset[] = { 0x00, 0x00 + 192 - 1 };
 	int ret = 0;
 
 	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
@@ -319,9 +198,9 @@ static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 	if (ret)
 		goto err_msg;
 
-	mipi_dbi_command(dbi, MIPI_DCS_SET_COLUMN_ADDRESS, caset[0], caset[1]);
+	mipi_dbi_command(dbi, MIPI_DCS_SET_COLUMN_ADDRESS, 0x17, 0x24);
 
-	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, raset[0], raset[1]);
+	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, 0x00, 0xBF);
 
 	ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START,
 				   (u8 *)dbidev->tx_buf, (168 + 24) * 14 * 3);
