@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 
 ## Get Started
 
-The fllowing steps assume you are using YDP420H001-V3 as the display.
+The fllowing steps assume you are using YDP290H001-V3 as the display.
 
 ### 1. Setup Luckfox Pico SDK
 
@@ -98,8 +98,8 @@ if you are using other display, modify the compatible string in the dts file(`rv
 
 		// compatible = "osptek,ydp154h008-v3";
 		// compatible = "osptek,ydp213h001-v3";
-		// compatible = "osptek,ydp290h001-v3";
-		compatible = "osptek,ydp420h001-v3";
+		compatible = "osptek,ydp290h001-v3";
+		// compatible = "osptek,ydp420h001-v3";
 
 		...
 	};

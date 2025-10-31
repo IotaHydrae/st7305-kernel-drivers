@@ -97,8 +97,8 @@
 
 		// compatible = "osptek,ydp154h008-v3";
 		// compatible = "osptek,ydp213h001-v3";
-		// compatible = "osptek,ydp290h001-v3";
-		compatible = "osptek,ydp420h001-v3";
+		compatible = "osptek,ydp290h001-v3";
+		// compatible = "osptek,ydp420h001-v3";
 
 		spi-max-frequency = <50000000>;
 		reg = <0>;

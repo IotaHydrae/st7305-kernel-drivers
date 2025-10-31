@@ -156,6 +156,7 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	mipi_dbi_command(dbi, 0xD0, 0xFF); // Auto power down
 	mipi_dbi_command(dbi, 0x38); // High Power Mode on
 	mipi_dbi_command(dbi, 0xBB, 0x4F); // Enable Clear RAM
+	mipi_dbi_command(dbi, MIPI_DCS_ENTER_INVERT_MODE);
 	mipi_dbi_command(dbi, MIPI_DCS_SET_DISPLAY_ON);
 
 	st7305->desc->init_seq(st7305);
