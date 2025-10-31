@@ -1,2 +1,2 @@
 CompileFlags:
-  Remove: [-fconserve-stack, -fno-allow-store-data-races, -mabi=lp64]
+  Remove: [-fconserve-stack, -fno-ipa-sra]

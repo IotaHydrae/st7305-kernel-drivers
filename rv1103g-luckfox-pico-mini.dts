@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 Luckfox Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rv1103.dtsi"
+#include "rv1106-evb.dtsi"
+#include "rv1103-luckfox-pico-ipc.dtsi"
+
+/ {
+	model = "Luckfox Pico Mini";
+	compatible = "rockchip,rv1103g-38x38-ipc-v10", "rockchip,rv1103";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=tty0 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
+	};
+};
+
+/**********SFC**********/
+&sfc {
+	status = "okay";
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <75000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
+/**********SDMMC**********/
+&sdmmc {
+	max-frequency = <50000000>;
+	no-mmc;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	
+	//sdio
+	cap-sdio-irq;
+	non-removable;	
+	no-1-8-v;
+	supports-sdio;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
+	status = "okay";
+};
+
+/**********ETH**********/
+&gmac {
+	status = "disabled";
+};
+
+/**********USB**********/
+&usbdrd_dwc3 {
+	status = "okay";
+	dr_mode = "peripheral";
+};
+
+&pinctrl {
+	tft {
+		tft_pins: tft_pins {
+			rockchip,pins =
+				/* tft_dc */
+				<1 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>,
+				/* tft_reset */
+				<1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+/**********SPI**********/
+/* SPI0_M0 */
+&spi0 {
+	pinctrl-0 = <&spi0m0_clk &spi0m0_mosi &spi0m0_cs0>;
+	status = "okay";
+
+	spidev@0 {
+		spi-max-frequency = <50000000>;
+		status = "disabled";
+	};
+
+	fbtft@0 {
+		status = "disabled";
+	};
+
+	tft: st7305@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&tft_pins>;
+
+		// compatible = "osptek,ydp154h008-v3";
+		// compatible = "osptek,ydp213h001-v3";
+		// compatible = "osptek,ydp290h001-v3";
+		compatible = "osptek,ydp420h001-v3";
+
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+
+		reset-gpios = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
+		dc-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
+};
+
+/**********I2C**********/
+/* I2C3_M1 */
+&i2c3 {
+	status = "disabled";
+	clock-frequency = <100000>;
+};
+
+/**********UART**********/
+/* UART3_M1 */
+&uart3 {
+	status = "disabled";
+};
+
+/* UART4_M1 */
+&uart4 {
+	status = "disabled";
+};
+
+/**********PWM**********/
+/* PWM1_M0 */
+&pwm1 {
+	status = "disabled";
+};

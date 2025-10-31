@@ -1,25 +1,14 @@
-
-# local kernel build dir
-KERN_DIR:=/lib/modules/$(shell uname -r)/build
-
-# users kernel dir
-# KERN_DIR:=/home/user/linux
-
-MODULE_NAME:=st7305-drmfb
+ARCH := arm
+CROSS_COMPILE := ${HOME}/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-
+KERN_DIR := ${HOME}/luckfox/pico/sysdrv/source/objs_kernel
 
 all:
-	make -C $(KERN_DIR) M=`pwd` modules
-
+	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=`pwd` modules
 clean:
-	make -C $(KERN_DIR) M=`pwd` modules clean
+	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=`pwd` modules clean
 
-dtb:
-	dtc -@ -Hepapr -I dts -O dtb -o st7305-drmfb.dtbo st7305-drmfb.dts
-	make -C overlays
+clena: clean
+#CFLAGS_$(MODULE_NAME).o := -DDEBUG
 
-test: all
-	sudo rmmod $(MODULE_NAME).ko || true
-	sudo insmod $(MODULE_NAME).ko || true
-
-obj-m += $(MODULE_NAME).o
-$(MODULE_NAME)-y += st7305.o drm_mipi_dbi.o
+obj-m += st7305_tinydrm.o
+st7305_tinydrm-objs := st7305.o drm_mipi_dbi.o drm_fb_cma_helper.o
