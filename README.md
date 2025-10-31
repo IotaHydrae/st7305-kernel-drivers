@@ -14,6 +14,12 @@
 
 ![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
 
+
+
+https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
+
+
+
 ## Get Started
 
 The fllowing steps assume you are using YDP420H001-V3 as the display.
