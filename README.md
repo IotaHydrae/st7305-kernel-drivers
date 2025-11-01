@@ -22,6 +22,17 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 
 以下步骤假设您使用的是 YDP290H001-V3 显示屏。
 
+| 屏幕引脚定义 | Luckfox Pico 的引脚     |
+| ------------ | ----------------------- |
+| GND          | GND                     |
+| VCC          | 3.3V                    |
+| SCL          | SPI0_CLK_M0 - GPIO1_C1  |
+| SDA          | SPI0_MOSI_M1 - GPIO1_C2 |
+| RES          | GPIO1_C3                |
+| DC           | GPIO1_C4                |
+| CS           | SPI0_CS0_M0 - GPIO1_C0  |
+| (TE)         | GPIO1_C5                |
+
 ### 1. 部署 Luckfox Pico SDK
 
 强烈建议您在继续操作之前查看 [SDK 编译指南](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/SDK-Image-Compilation)。

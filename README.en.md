@@ -1,7 +1,7 @@
 # Kernel DRM drivers for TFT Displays based on ST7305
 
 | Hardware Info  |                                                                             |
-|----------------|-----------------------------------------------------------------------------|
+| -------------- | --------------------------------------------------------------------------- |
 | Dev Board      | Luckfox Pico Mini                                                           |
 | Kernel Version | 5.10.160                                                                    |
 | Distro         | Buildroot 2023.02.6                                                         |
@@ -13,15 +13,22 @@
 ![console](./assets/ydp154h008_v3_console.jpg)![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
 
-
-
 https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
-
-
 
 ## Get Started
 
 The fllowing steps assume you are using YDP290H001-V3 as the display.
+
+| Display pin define | Pins of Luckfox Pico    |
+| ------------------ | ----------------------- |
+| GND                | GND                     |
+| VCC                | 3.3V                    |
+| SCL                | SPI0_CLK_M0 - GPIO1_C1  |
+| SDA                | SPI0_MOSI_M1 - GPIO1_C2 |
+| RES                | GPIO1_C3                |
+| DC                 | GPIO1_C4                |
+| CS                 | SPI0_CS0_M0 - GPIO1_C0  |
+| (TE)               | GPIO1_C5                |
 
 ### 1. Setup Luckfox Pico SDK
 
@@ -34,6 +41,7 @@ cd pico
 ```
 
 According to the luckfox pico wiki, you need to install the following packages:
+
 ```bash
 sudo apt-get install -y git ssh make gcc gcc-multilib g++-multilib module-assistant expect g++ gawk texinfo libssl-dev bison flex fakeroot cmake unzip gperf autoconf device-tree-compiler libncurses5-dev pkg-config bc python-is-python3 passwd openssl openssh-server openssh-client vim file cpio rsync curl
 ```
@@ -83,6 +91,7 @@ Build the kernel and driver at least once:
 ### 2. Replace the kernel dts
 
 Clone this repo first
+
 ```bash
 cd ~/luckfox
 git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git
@@ -105,6 +114,7 @@ if you are using other display, modify the compatible string in the dts file(`rv
 ```
 
 Also, if you want the framebuffer console feature, you’ll want to make sure to keep this DTS node:
+
 ```c
 chosen {
 		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=tty0 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
@@ -120,11 +130,11 @@ cp rv1103g-luckfox-pico-mini.dts ~/luckfox/pico/sysdrv/source/kernel/arch/arm/bo
 ### 3. Build and flash the new kernel img to Luckfox Pico
 
 go back to the luckfox pico sdk and build the new kernel img
+
 ```bash
 cd ~/luckfox/pico
 ./build.sh kernel
 ```
-
 
 reflash the new kernel img `output/image/boot.img` by running following commands:
 
