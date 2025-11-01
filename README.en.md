@@ -1,30 +1,31 @@
-# 适用于 ST7305 反射式 TFT 的内核 DRM 驱动
+# Kernel DRM drivers for TFT Displays based on ST7305
 
-[English](README.en.md)
-
-| 硬件信息 |                                                                             |
-| -------- | --------------------------------------------------------------------------- |
-| 开发板   | Luckfox Pico Mini                                                           |
-| 内核版本 | 5.10.160                                                                    |
-| 发行版   | Buildroot 2023.02.6                                                         |
-| 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200 |
-| -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250 |
-| -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384 |
-| -        | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400 |
-| 驱动IC   | ST7305                                                                      |
+| Hardware Info  |                                                                             |
+|----------------|-----------------------------------------------------------------------------|
+| Dev Board      | Luckfox Pico Mini                                                           |
+| Kernel Version | 5.10.160                                                                    |
+| Distro         | Buildroot 2023.02.6                                                         |
+| Displays       | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200 |
+| -              | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250 |
+| -              | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384 |
+| -              | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400 |
 
 ![console](./assets/ydp154h008_v3_console.jpg)![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
 
+
+
 https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 
-## 快速上手
 
-以下步骤假设您使用的是 YDP290H001-V3 显示屏。
 
-### 1. 部署 Luckfox Pico SDK
+## Get Started
 
-强烈建议您在继续操作之前查看 [SDK 编译指南](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/SDK-Image-Compilation)。
+The fllowing steps assume you are using YDP290H001-V3 as the display.
+
+### 1. Setup Luckfox Pico SDK
+
+It's highly recommended take a look at the [SDK Compilation Guide](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/SDK-Image-Compilation) before proceeding.
 
 ```bash
 mkdir -p ~/luckfox && cd ~/luckfox
@@ -32,13 +33,12 @@ git clone https://gitee.com/LuckfoxTECH/luckfox-pico.git pico
 cd pico
 ```
 
-根据 luckfox pico wiki 的说明，您需要安装以下软件包：
-
+According to the luckfox pico wiki, you need to install the following packages:
 ```bash
 sudo apt-get install -y git ssh make gcc gcc-multilib g++-multilib module-assistant expect g++ gawk texinfo libssl-dev bison flex fakeroot cmake unzip gperf autoconf device-tree-compiler libncurses5-dev pkg-config bc python-is-python3 passwd openssl openssh-server openssh-client vim file cpio rsync curl
 ```
 
-然后按照以下步骤配置 SDK：
+Then config the SDK with following steps:
 
 ```bash
 ❯ ./build.sh lunch
@@ -73,24 +73,23 @@ Which would you like? [0][default:0]: 0
 [build.sh:info] Running build_select_board succeeded.
 ```
 
-至少编译一次内核和驱动程序：
+Build the kernel and driver at least once:
 
 ```bash
 ./build.sh kernel
 ./build.sh driver
 ```
 
-### 2. 替换内核 DTS
+### 2. Replace the kernel dts
 
-请先克隆此仓库
-
+Clone this repo first
 ```bash
 cd ~/luckfox
 git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git
 cd st7305-kernel-drivers
 ```
 
-如果您使用的是其他显示器，请先修改 dts 文件（`rv1103g-luckfox-pico-mini.dts`）中的兼容字符串。
+if you are using other display, modify the compatible string in the dts file(`rv1103g-luckfox-pico-mini.dts`) first
 
 ```c
 	tft: st7305@0 {
@@ -105,30 +104,29 @@ cd st7305-kernel-drivers
 	};
 ```
 
-另外，如果您需要帧缓冲区控制台功能，则需要确保保留此 DTS 节点：
-
+Also, if you want the framebuffer console feature, you’ll want to make sure to keep this DTS node:
 ```c
 chosen {
 		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=tty0 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
 	};
 ```
 
-将 dts 文件复制到 Luckfox Pico SDK
+copy the dts file to luckfox pico sdk
 
 ```bash
 cp rv1103g-luckfox-pico-mini.dts ~/luckfox/pico/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts
 ```
 
-### 3. 构建并刷写新的内核镜像到 Luckfox Pico
+### 3. Build and flash the new kernel img to Luckfox Pico
 
-返回 Luckfox Pico SDK 并构建新的内核镜像
-
+go back to the luckfox pico sdk and build the new kernel img
 ```bash
 cd ~/luckfox/pico
 ./build.sh kernel
 ```
 
-运行以下命令重新刷写新的内核镜像文件 `output/image/boot.img`：
+
+reflash the new kernel img `output/image/boot.img` by running following commands:
 
 ```bash
 adb push output/image/boot.img /tmp
@@ -136,7 +134,7 @@ adb shell 'dd if=/tmp/boot.img of=/dev/mmcblk1p4 bs=1M'
 adb reboot
 ```
 
-### 4. 构建并测试 st7305 驱动程序
+### 4. Build and test st7305 driver
 
 ```bash
 cd ~/luckfox/st7305-kernel-drivers
@@ -144,9 +142,9 @@ make && adb push st7305_tinydrm.ko /tmp
 adb shell 'insmod /tmp/st7305_tinydrm.ko'
 ```
 
-#### 4.1 （待办事项）运行 lvgl 演示
+#### 4.1 (TODO) Run lvgl demo
 
-## 参考
+## References
 
 1. [kernel 5.10.160 source](https://elixir.bootlin.com/linux/v5.10.160/source)
 2. [Luckfox Pico Wiki - Pinout](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/Pinout)
