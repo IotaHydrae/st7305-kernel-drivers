@@ -1,4 +1,77 @@
-Run time dts overlay
+## DTS diff
+
+```diff
+diff --git a/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts b/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts
+index 85ce5b81d..336d03515 100755
+--- a/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts
++++ b/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts
+@@ -12,6 +12,10 @@
+ / {
+        model = "Luckfox Pico Mini";
+        compatible = "rockchip,rv1103g-38x38-ipc-v10", "rockchip,rv1103";
++
++       chosen {
++               bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=tty0 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
++       };
+ };
+
+ /**********SFC**********/
+@@ -57,12 +61,52 @@ &usbdrd_dwc3 {
+        dr_mode = "peripheral";
+ };
+
++&pinctrl {
++       tft {
++               tft_pins: tft_pins {
++                       rockchip,pins =
++                               /* tft_dc */
++                               <1 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>,
++                               /* tft_reset */
++                               <1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
++               };
++       };
++};
++
+ /**********SPI**********/
+ /* SPI0_M0 */
+ &spi0 {
+-       status = "disabled";
++       pinctrl-0 = <&spi0m0_clk &spi0m0_mosi &spi0m0_cs0>;
++       status = "okay";
++
+        spidev@0 {
+                spi-max-frequency = <50000000>;
++               status = "disabled";
++       };
++
++       fbtft@0 {
++               status = "disabled";
++       };
++
++       tft: st7305@0 {
++               #address-cells = <1>;
++               #size-cells = <1>;
++
++               pinctrl-names = "default";
++               pinctrl-0 = <&tft_pins>;
++
++               // compatible = "osptek,ydp154h008-v3";
++               // compatible = "osptek,ydp213h001-v3";
++               compatible = "osptek,ydp290h001-v3";
++               // compatible = "osptek,ydp420h001-v3";
++
++               spi-max-frequency = <50000000>;
++               reg = <0>;
++
++               reset-gpios = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
++               dc-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;
++
++               status = "okay";
+        };
+ };
+```
+
+## Run time dts overlay
 
 ```bash
 dtc -@ -Hepapr -I dts -O dtb -o st7305-overlay.dtbo st7305-overlay.dts
