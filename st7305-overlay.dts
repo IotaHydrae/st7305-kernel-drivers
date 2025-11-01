@@ -1,0 +1,20 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "rockchip,rv1103";
+
+	fragment@1 {
+		target-path = "/spi@ff500000";
+		__overlay__ {
+
+			st7305@0 {
+				// compatible = "sitronix,st7305";
+				compatible = "osptek,ydp154h008-v3";
+				// compatible = "osptek,ydp213h001-v3";
+				// compatible = "osptek,ydp290h001-v3";
+				// compatible = "osptek,ydp420h001-v3";
+			};
+		};
+	};
+};
