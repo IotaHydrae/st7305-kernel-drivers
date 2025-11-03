@@ -3,7 +3,11 @@
  * DRM driver for display panels connected to a Sitronix st7305
  * display controller in SPI mode.
  *
- * Copyright 2025 Wooden Chair <hua.zheng@embeddedboys.com>
+ * This driver is inspired by:
+ *   https://github.com/DuRuofu/esp-idf-st7305-Ink-screen
+ *
+ * Copyright (c) 2025 DuRuofu <duruofu@qq.com>
+ * Copyright (c) 2025 Wooden Chair <hua.zheng@embeddedboys.com>
  */
 
 #include <linux/backlight.h>
