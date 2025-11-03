@@ -8,6 +8,11 @@
 		target = <&spi0>;
 		__overlay__ {
 			status = "okay";
+
+			spidev@0 {
+				status = "disabled";
+			};
+
 			tft: st7305@0 {
 				#address-cells = <1>;
 				#size-cells = <1>;
