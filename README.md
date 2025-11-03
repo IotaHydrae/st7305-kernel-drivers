@@ -13,10 +13,8 @@
 | -        | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400 |
 | 驱动IC   | ST7305                                                                      |
 
-![console](./assets/ydp154h008_v3_console.jpg)![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
-![widgets](./assets/ydp290h001_v3_widgets.jpg)![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
-
-https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
+![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
+![widgets](./assets/ydp290h001_v3_widgets.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
 
 ## 快速上手
 
