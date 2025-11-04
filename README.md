@@ -2,6 +2,11 @@
 
 [English](README.en.md)
 
+## 特性
+
+- 支持多个屏幕型号
+
+
 | 硬件信息 |                                                                             |
 | -------- | --------------------------------------------------------------------------- |
 | 开发板   | Raspberry Pi Compute Model 4                                                |
@@ -33,13 +38,13 @@
 
 您需要安装这些软件包才能在本地构建内核模块
 
-```shell
+```bash
 
 ```
 
 克隆本仓库，编译驱动和设备树
 
-```shell
+```bash
 git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git
 git checkout main
 make
@@ -47,7 +52,7 @@ make
 
 运行时加载设备树 overlay 和驱动
 
-```shell
+```bash
 sudo dtoverlay ./st7305-drmfb-dtbo
 sudo insmod ./st7305-drmfb.ko
 ```
@@ -56,10 +61,45 @@ sudo insmod ./st7305-drmfb.ko
 
 将设备树改动保存到设备上
 
-```shell
+```bash
 sudo cp ./st7305-drmfb.dtbo /boot/firmware/overlays/
 sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.bak
 echo "dtoverlay=st7305-drmfb" | sudo tee -a /boot/firmware/config.txt
+```
+
+### 安装桌面环境
+
+```bash
+sudo apt install --no-install-recommends xserver-xorg xinit xfce4
+sudo apt install dbus-x11 firefox fonts-wqy-zenhei
+```
+
+你需要从如下两种驱动方式选择其一
+
+#### 1. xserver 使用 fbdev 驱动显示
+
+```bash
+sudo vim /usr/share/X11/xorg.conf.d/99-fbdev.conf
+
+# 将如下内容复制到文件中
+Section "Device"
+    Identifier "ST7305"
+    Driver "fbdev"
+    Option "fbdev" "/dev/fb0"
+EndSection
+```
+
+#### 2. xserver 使用 modesetting 驱动显示
+
+```bash
+sudo vim /usr/share/X11/xorg.conf.d/99-fbdev.conf
+
+# 将如下内容复制到文件中
+Section "Device"
+    Identifier "ST7305"
+    Driver "fbdev"
+    Option "fbdev" "/dev/fb0"
+EndSection
 ```
 
 ### 可能的特性
