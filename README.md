@@ -2,16 +2,16 @@
 
 [English](README.en.md)
 
-| 硬件信息 |                                                                             |
-| -------- | --------------------------------------------------------------------------- |
-| 开发板   | Luckfox Pico Mini                                                           |
-| 内核版本 | 5.10.160                                                                    |
-| 发行版   | Buildroot 2023.02.6                                                         |
-| 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200 |
-| -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250 |
-| -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384 |
-| -        | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400 |
-| 驱动IC   | ST7305                                                                      |
+| 硬件信息 |                                                                                                                                                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 开发板   | Luckfox Pico Mini                                                                                                                                                                                                          |
+| 内核版本 | 5.10.160                                                                                                                                                                                                                   |
+| 发行版   | Buildroot 2023.02.6                                                                                                                                                                                                        |
+| 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200                                                                                                                                                |
+| -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250                                                                                                                                                |
+| -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384                                                                                                                                                |
+| -        | [W420HC018MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpJD3qW3wnoilcGBA0fK5Eus&skuId=5724504589973&spm=tbpc.boughtlist.suborder_itemtitle.1.6f4d2e8dbWO3RS) 4.20" Mono 300x400 |
+| 驱动IC   | ST7305                                                                                                                                                                                                                     |
 
 ![console](./assets/ydp154h008_v3_console.jpg)![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
