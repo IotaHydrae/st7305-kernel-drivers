@@ -17,9 +17,12 @@ dtb:
 	dtc -@ -Hepapr -I dts -O dtb -o st7305-drmfb.dtbo st7305-drmfb.dts
 	make -C overlays
 
+dtb_load: dtb
+	sudo dtoverlay ./st7305-drmfb.dtbo
+
 test: all
 	sudo rmmod $(MODULE_NAME).ko || true
 	sudo insmod $(MODULE_NAME).ko || true
 
 obj-m += $(MODULE_NAME).o
-$(MODULE_NAME)-y += st7305.o drm_mipi_dbi.o
+$(MODULE_NAME)-y += st7305.o dither.o drm_mipi_dbi.o

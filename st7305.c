@@ -34,6 +34,8 @@
 #include <drm/drm_gem_atomic_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 
+#include "dither.h"
+
 #define DRV_NAME "st7305"
 
 #define ST7305_MADCTL_MY BIT(7) // Page Address Order
@@ -50,6 +52,8 @@ struct st7305 {
 
 	/* TODO: support TE */
 	struct gpio_desc *te;
+
+	u8 dither_type;
 
 	const struct st7305_panel_desc *desc;
 };
@@ -185,7 +189,6 @@ static inline void st7305_draw_pixel(u8 *dst, uint x, uint y, u8 left_offset,
 	u32 bit_index = ((new_x & 3) << 1) | (y & 1);
 	u8 mask = 1u << (7 - bit_index);
 	u8 set = (gray >> 7) * mask;
-	// u8 set = (gray > 200 ? 1 : 0) * mask;
 
 	dst[byte_index] = (dst[byte_index] & ~mask) | set;
 }
@@ -199,9 +202,9 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 	size_t len = (clip->x2 - clip->x1) * (clip->y2 - clip->y1);
 	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
 	struct iosys_map dst_map, vmap;
+	u8 *src, *buf, *dither_buf;
 	u8 offset, page_size;
 	unsigned int x, y;
-	u8 *src, *buf;
 
 	buf = kmalloc(len, GFP_KERNEL);
 	if (!buf)
@@ -215,10 +218,25 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 	drm_fb_xrgb8888_to_gray8(&dst_map, NULL, &vmap, fb, clip, fmtcnv_state);
 	src = buf;
 
+	if (st7305->dither_type > 0) {
+		dither_buf = kzalloc(fb->width * fb->height, GFP_KERNEL);
+		if (!dither_buf)
+			goto free_buf;
+
+		dither_gray8_to_bw(st7305->dither_type, buf, dither_buf,
+				   fb->width, fb->height);
+		src = dither_buf;
+	}
+
 	for (y = clip->y1; y < clip->y2; y++)
 		for (x = clip->x1; x < clip->x2; x++)
 			st7305_draw_pixel(dst, x, y, offset, page_size, *src++);
 
+	if (st7305->dither_type > 0) {
+		kfree(dither_buf);
+	}
+
+free_buf:
 	kfree(buf);
 }
 
@@ -276,6 +294,8 @@ err_msg:
 static void st7305_pipe_update(struct drm_simple_display_pipe *pipe,
 			       struct drm_plane_state *old_state)
 {
+	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(pipe->crtc.dev);
+	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
 	struct drm_plane_state *state = pipe->plane.state;
 	struct drm_shadow_plane_state *shadow_plane_state =
 		to_drm_shadow_plane_state(state);
@@ -289,9 +309,19 @@ static void st7305_pipe_update(struct drm_simple_display_pipe *pipe,
 	if (!drm_dev_enter(fb->dev, &idx))
 		return;
 
-	if (drm_atomic_helper_damage_merged(old_state, state, &rect))
+	if (st7305->dither_type > 0) {
+		rect.x1 = 0;
+		rect.y1 = 0;
+		rect.x2 = fb->width;
+		rect.y2 = fb->height;
 		st7305_fb_dirty(&shadow_plane_state->data[0], fb, &rect,
 				&shadow_plane_state->fmtcnv_state);
+	} else {
+		if (drm_atomic_helper_damage_merged(old_state, state, &rect)) {
+			st7305_fb_dirty(&shadow_plane_state->data[0], fb, &rect,
+					&shadow_plane_state->fmtcnv_state);
+		}
+	}
 
 	drm_dev_exit(idx);
 }
@@ -524,6 +554,9 @@ static int st7305_probe(struct spi_device *spi)
 	st7305->desc = of_device_get_match_data(dev);
 	if (!st7305->desc)
 		return -ENODEV;
+
+	st7305->dither_type = DITHER_TYPE_NONE;
+	// st7305->dither_type = DITHER_TYPE_BAYER_16X16;
 
 	mode = st7305->desc->mode;
 	width = mode->hdisplay;
