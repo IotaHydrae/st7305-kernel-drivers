@@ -96,9 +96,11 @@ sudo vim /usr/share/X11/xorg.conf.d/99-fbdev.conf
 
 # 将如下内容复制到文件中
 Section "Device"
-    Identifier "ST7305"
-    Driver "fbdev"
-    Option "fbdev" "/dev/fb0"
+    Identifier "TinyDRM Display"
+    Driver "modesetting"
+    Option "AccelMethod" "glamor"
+    Option "kmsdev" "/dev/dri/card2"
+    Option "SWcursor" "true"
 EndSection
 ```
 
