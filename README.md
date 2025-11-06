@@ -16,7 +16,9 @@
 | -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250 |
 | -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384 |
 | -        | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400 |
+| - | [W420HC018MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpJD3qW3wnoilcGBA0fK5Eus&skuId=5724504589973&spm=tbpc.boughtlist.suborder_itemtitle.1.6f4d2e8dbWO3RS) 4.20" Mono 300x400 |
 | 驱动IC   | ST7305                                                                      |
+
 
 ![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
@@ -48,6 +50,7 @@
 git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git
 git checkout main
 make
+make dtb
 ```
 
 运行时加载设备树 overlay 和驱动
@@ -107,6 +110,14 @@ EndSection
 ### 可能的特性
 
 - [ ] 驱动层旋转支持
+
+### 一些有用的命令
+
+开关控制台光标闪烁
+```
+echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink
+echo 1 | sudo tee /sys/class/graphics/fbcon/cursor_blink
+```
 
 ## 参考
 
