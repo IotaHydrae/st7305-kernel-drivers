@@ -11,4 +11,4 @@ clena: clean
 #CFLAGS_$(MODULE_NAME).o := -DDEBUG
 
 obj-m += st7305_tinydrm.o
-st7305_tinydrm-objs := st7305.o drm_mipi_dbi.o drm_fb_cma_helper.o
+st7305_tinydrm-objs := st7305.o dither.o drm_mipi_dbi.o drm_fb_cma_helper.o

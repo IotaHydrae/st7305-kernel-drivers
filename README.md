@@ -3,15 +3,19 @@
 [English](README.en.md)
 
 | 硬件信息 |                                                                                                                                                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 开发板   | Luckfox Pico Mini                                                                                                                                                                                                          |
 | 内核版本 | 5.10.160                                                                                                                                                                                                                   |
 | 发行版   | Buildroot 2023.02.6                                                                                                                                                                                                        |
 | 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200                                                                                                                                                |
 | -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250                                                                                                                                                |
 | -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384                                                                                                                                                |
+| -        | [W290HC019MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpDu1mdlByTlb9U8Knb0Kg2E&skuId=5706172761739&spm=tbpc.boughtlist.suborder_itemtitle.1.16b02e8dATbioT) 2.90" Mono 168x384 |
 | -        | [W420HC018MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpJD3qW3wnoilcGBA0fK5Eus&skuId=5724504589973&spm=tbpc.boughtlist.suborder_itemtitle.1.6f4d2e8dbWO3RS) 4.20" Mono 300x400 |
 | 驱动IC   | ST7305                                                                                                                                                                                                                     |
+| -        | -                                                                                                                                                                                                                          |
+| 显示屏   | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400                                                                                                                                                |
+| 驱动IC   | ST7306                                                                                                                                                                                                                     |
 
 ![console](./assets/ydp154h008_v3_console.jpg)![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![console](./assets/ydp420h001_v3_console.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
@@ -23,7 +27,7 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 以下步骤假设您使用的是 YDP290H001-V3 显示屏。
 
 | 屏幕引脚定义 | Luckfox Pico 的引脚     |
-| ------------ | ----------------------- |
+|--------------|-------------------------|
 | GND          | GND                     |
 | VCC          | 3.3V                    |
 | SCL          | SPI0_CLK_M0 - GPIO1_C1  |
@@ -155,7 +159,31 @@ make && adb push st7305_tinydrm.ko /tmp
 adb shell 'insmod /tmp/st7305_tinydrm.ko'
 ```
 
-#### 4.1 （待办事项）运行 lvgl 演示
+#### 4.1 驱动运行时可调整的参数
+
+----------
+
+##### **dither_type**
+
+参考 [dither.h](./dither.h) 头文件中的取值，这是一个示例，未来可能支持更多抖动算法
+
+```c
+enum {
+	DITHER_TYPE_NONE,
+	DITHER_TYPE_BAYER_4X4,
+	DITHER_TYPE_BAYER_16X16,
+	DITHER_TYPE_MAX,
+};
+```
+
+```bash
+echo 2 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
+```
+
+--------------
+
+
+#### 4.2 （待办事项）运行 lvgl 演示
 
 ## 参考
 
