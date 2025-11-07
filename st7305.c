@@ -72,6 +72,8 @@ struct st7305_panel_desc {
 	size_t bufsize;
 
 	int (*init_seq)(struct st7305 *st7305);
+	void (*draw_pixel)(u8 *dst, uint x, uint y, u8 left_offset,
+			   u8 page_size, u8 gray);
 };
 
 static inline struct st7305 *dbi_to_st7305(struct mipi_dbi *dbi)
@@ -185,12 +187,33 @@ static inline void st7305_draw_pixel(u8 *dst, uint x, uint y, u8 left_offset,
 				     u8 page_size, u8 gray)
 {
 	uint new_x = x + left_offset;
-	u32 byte_index = ((y >> 1) * page_size) + (new_x >> 2);
-	u32 bit_index = ((new_x & 3) << 1) | (y & 1);
-	u8 mask = 1u << (7 - bit_index);
+	u32 byte_idx = ((y >> 1) * page_size) + (new_x >> 2);
+	u32 bit_idx = ((new_x & 3) << 1) | (y & 1);
+	u8 mask = BIT(7 - bit_idx);
 	u8 set = (gray >> 7) * mask;
 
-	dst[byte_index] = (dst[byte_index] & ~mask) | set;
+	dst[byte_idx] = (dst[byte_idx] & ~mask) | set;
+}
+
+static inline void st7306_draw_pixel(u8 *dst, uint x, uint y, u8 left_offset,
+				     u8 page_size, u8 gray)
+{
+	uint new_x = x + left_offset;
+
+	uint real_x = new_x >> 1;
+	uint real_y = y >> 1;
+	uint byte_idx = real_y * page_size + real_x;
+
+	uint y_bit = y & 1;
+	uint x_bit = new_x & 1;
+
+	uint base_bit = (x_bit << 2) + y_bit;
+	u8 mask = BIT(7 - base_bit) | BIT(5 - base_bit);
+
+	u8 val = dst[byte_idx];
+	u8 on = -(gray >> 7); // (gray>>7)=0|1 -> 0x00|0xFF
+
+	dst[byte_idx] = (val & ~mask) | (on & mask);
 }
 
 static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
@@ -200,6 +223,8 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	size_t len = (clip->x2 - clip->x1) * (clip->y2 - clip->y1);
+	void (*draw_pixel)(u8 *dst, uint x, uint y, u8 left_offset,
+			   u8 page_size, u8 gray);
 	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
 	struct iosys_map dst_map, vmap;
 	u8 *src, *buf, *dither_buf;
@@ -209,9 +234,6 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 	buf = kmalloc(len, GFP_KERNEL);
 	if (!buf)
 		return;
-
-	offset = st7305->desc->left_offset;
-	page_size = st7305->desc->page_size;
 
 	iosys_map_set_vaddr(&dst_map, buf);
 	iosys_map_set_vaddr(&vmap, vaddr);
@@ -228,9 +250,13 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 		src = dither_buf;
 	}
 
+	offset = st7305->desc->left_offset;
+	page_size = st7305->desc->page_size;
+	draw_pixel = st7305->desc->draw_pixel;
+
 	for (y = clip->y1; y < clip->y2; y++)
 		for (x = clip->x1; x < clip->x2; x++)
-			st7305_draw_pixel(dst, x, y, offset, page_size, *src++);
+			draw_pixel(dst, x, y, offset, page_size, *src++);
 
 	if (st7305->dither_type > 0) {
 		kfree(dither_buf);
@@ -414,6 +440,7 @@ static const struct st7305_panel_desc ydp154h008_v3_desc = {
 	.bufsize = 51 * 100,
 
 	.init_seq = ydp154h008_v3_init_seq,
+	.draw_pixel = st7305_draw_pixel,
 };
 
 static int ydp213h001_v3_init_seq(struct st7305 *st7305)
@@ -450,6 +477,7 @@ static const struct st7305_panel_desc ydp213h001_v3_desc = {
 	.bufsize = 33 * 125,
 
 	.init_seq = ydp213h001_v3_init_seq,
+	.draw_pixel = st7305_draw_pixel,
 };
 
 static int ydp290h001_v3_init_seq(struct st7305 *st7305)
@@ -483,9 +511,10 @@ static const struct st7305_panel_desc ydp290h001_v3_desc = {
 	.bufsize = 42 * 192,
 
 	.init_seq = ydp290h001_v3_init_seq,
+	.draw_pixel = st7305_draw_pixel,
 };
 
-static int ydp420h001_v3_init_seq(struct st7305 *st7305)
+static int w420hc018mono_12z_init_seq(struct st7305 *st7305)
 {
 	struct mipi_dbi *dbi = st7305->dbi;
 
@@ -508,12 +537,12 @@ static int ydp420h001_v3_init_seq(struct st7305 *st7305)
 	return 0;
 }
 
-static const struct drm_display_mode ydp420h001_v3_mode = {
+static const struct drm_display_mode w420hc018mono_12z_mode = {
 	DRM_SIMPLE_MODE(300, 400, 64, 85),
 };
 
-static const struct st7305_panel_desc ydp420h001_v3_desc = {
-	.mode = &ydp420h001_v3_mode,
+static const struct st7305_panel_desc w420hc018mono_12z_desc = {
+	.mode = &w420hc018mono_12z_mode,
 
 	.caset[0] = 0x05,
 	.caset[1] = 0x36,
@@ -528,7 +557,61 @@ static const struct st7305_panel_desc ydp420h001_v3_desc = {
 
 	.bufsize = 150 * 200,
 
+	.init_seq = w420hc018mono_12z_init_seq,
+	.draw_pixel = st7305_draw_pixel,
+};
+
+static int ydp420h001_v3_init_seq(struct st7305 *st7305)
+{
+	struct mipi_dbi *dbi = st7305->dbi;
+
+	mipi_dbi_command(dbi, 0xD6, 0x17, 0x02); // NVM Load Control
+	mipi_dbi_command(dbi, 0xC0, 0x12, 0x0A); // Gate Voltage Setting
+
+	mipi_dbi_command(dbi, 0xC1, 0x37, 0x3E, 0x3C,
+			 0x3C); // VSHP Setting (4.8V)
+	mipi_dbi_command(dbi, 0xC2, 0x00, 0x21, 0x23,
+			 0x23); // VSLP Setting (0.5V)
+	mipi_dbi_command(dbi, 0xC4, 50, 0x5C, 0x5A,
+			 0x5A); // VSHN Setting (-3.8V)
+	mipi_dbi_command(dbi, 0xC5, 50, 0x35, 0x37,
+			 0x37); // VSLN Setting (0.5V)
+
+	mipi_dbi_command(dbi, 0x35, 0x00);
+	mipi_dbi_command(dbi, 0xD8, 0xA6, 0xE9);
+	mipi_dbi_command(dbi, 0xB0, 0x64); // Gate Line Setting: 400 line
+
+	return 0;
+}
+
+static const struct drm_display_mode ydp420h001_v3_mode = {
+	DRM_SIMPLE_MODE(300, 400, 64, 85),
+};
+
+static const struct st7305_panel_desc ydp420h001_v3_desc = {
+	.mode = &ydp420h001_v3_mode,
+
+	.caset[0] = 0x05,
+	.caset[1] = 0x36,
+
+	.raset[0] = 0x00,
+	.raset[1] = 0xC7,
+
+	.left_offset = 0,
+
+	.page_size = 150,
+	.page_count = 200,
+
+	.bufsize = 150 * 200,
+
 	.init_seq = ydp420h001_v3_init_seq,
+
+	/*
+	 * The ST7306 supports multi-color displays, and while its internal
+	 * display RAM layout differs slightly from the ST7305, the two are
+	 * otherwise largely compatible.
+	 */
+	.draw_pixel = st7306_draw_pixel,
 };
 
 DEFINE_DRM_GEM_DMA_FOPS(st7305_fops);
@@ -552,15 +635,20 @@ static const struct of_device_id st7305_of_match[] = {
 	  .data = &ydp213h001_v3_desc }, /* FIXME: display freezes after a few seconds */
 	{ .compatible = "osptek,ydp290h001-v3", .data = &ydp290h001_v3_desc },
 	{ .compatible = "osptek,ydp420h001-v3", .data = &ydp420h001_v3_desc },
-	{ .compatible = "wlk,w420hc018mono-122", .data = &ydp420h001_v3_desc },
-
+	{ .compatible = "wlk,w420hc018mono-12z",
+	  .data = &w420hc018mono_12z_desc },
 	{},
 };
 MODULE_DEVICE_TABLE(of, st7305_of_match);
 
 static const struct spi_device_id st7305_id[] = {
-	{ "st7305" },	     { "ydp154h008-v3" }, { "ydp213h001-v3" },
-	{ "ydp290h001-v3" }, { "ydp420h001-v3" }, {},
+	{ "st7305" },
+	{ "ydp154h008-v3" },
+	{ "ydp213h001-v3" },
+	{ "ydp290h001-v3" },
+	{ "ydp420h001-v3" },
+	{ "w420hc018mono-12z" },
+	{},
 };
 MODULE_DEVICE_TABLE(spi, st7305_id);
 
