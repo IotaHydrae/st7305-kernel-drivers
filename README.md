@@ -3,7 +3,7 @@
 [English](README.en.md)
 
 | 硬件信息 |                                                                                                                                                                                                                            |
-|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 开发板   | Luckfox Pico Mini                                                                                                                                                                                                          |
 | 内核版本 | 5.10.160                                                                                                                                                                                                                   |
 | 发行版   | Buildroot 2023.02.6                                                                                                                                                                                                        |
@@ -27,7 +27,7 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 以下步骤假设您使用的是 YDP290H001-V3 显示屏。
 
 | 屏幕引脚定义 | Luckfox Pico 的引脚     |
-|--------------|-------------------------|
+| ------------ | ----------------------- |
 | GND          | GND                     |
 | VCC          | 3.3V                    |
 | SCL          | SPI0_CLK_M0 - GPIO1_C1  |
@@ -161,7 +161,7 @@ adb shell 'insmod /tmp/st7305_tinydrm.ko'
 
 #### 4.1 驱动运行时可调整的参数
 
-----------
+---
 
 ##### **dither_type**
 
@@ -180,8 +180,7 @@ enum {
 echo 2 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
 ```
 
---------------
-
+---
 
 #### 4.2 （待办事项）运行 lvgl 演示
 
@@ -191,3 +190,9 @@ echo 2 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
 2. [Luckfox Pico Wiki - Pinout](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/Pinout)
 3. [ST7305 datasheet](https://admin.osptek.com/uploads/ST_7305_V0_2_d0b99d9cdb.pdf)
 4. [DuRuofu's st7305 drivers for esp32](https://github.com/DuRuofu/esp-idf-st7305-Ink-screen)
+
+## 使用到的转接板
+
+- [适用于鱼鹰光电等 ST7305 反射式 TFT 的转接板](https://oshwhub.com/embeddedboys/shi-yong-yu-st7305-fan-she-shi-tft-de-zhuan-jie-ban)
+- [Luckfox Pico Mini 2.9寸反射式TFT测试板](https://oshwhub.com/embeddedboys/luckfox-pico-mini-2-9-cun-fan-she-shi-tft-ce-shi-ban)
+- [树莓派 TFT 接口 HAT](https://oshwhub.com/embeddedboys/shu-mei-pai-tft-jie-kou-hat)
