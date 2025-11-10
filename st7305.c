@@ -623,6 +623,7 @@ static const struct of_device_id st7305_of_match[] = {
 	  .data = &ydp213h001_v3_desc }, /* FIXME: display freezes after a few seconds */
 	{ .compatible = "osptek,ydp290h001-v3", .data = &ydp290h001_v3_desc },
 	{ .compatible = "osptek,ydp420h001-v3", .data = &ydp420h001_v3_desc },
+	{ .compatible = "wlk,w290hc019mono-12z", .data = &ydp290h001_v3_desc },
 	{ .compatible = "wlk,w420hc018mono-12z",
 	  .data = &w420hc018mono_12z_desc },
 	{},
