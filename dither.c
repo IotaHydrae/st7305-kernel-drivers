@@ -100,9 +100,26 @@ static const struct dither supported_ditherings[] = {
 	{}
 };
 
+const char *dither_get_name(u8 type)
+{
+	if (type >= DITHER_TYPE_MAX)
+		return "invalid";
+
+	if (!supported_ditherings[type].name)
+		return "unknown";
+
+	return supported_ditherings[type].name;
+}
+EXPORT_SYMBOL(dither_get_name);
+
 void dither_gray8_to_bw(u8 type, const u8 *src, u8 *dst, int width, int height)
 {
-	if (supported_ditherings[type].algo)
-		supported_ditherings[type].algo(src, dst, width, height);
+	if (unlikely(type >= DITHER_TYPE_MAX))
+		return;
+
+	if (!src || !dst || !supported_ditherings[type].algo)
+		return;
+
+	supported_ditherings[type].algo(src, dst, width, height);
 }
 EXPORT_SYMBOL(dither_gray8_to_bw);

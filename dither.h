@@ -10,6 +10,7 @@ enum {
 	DITHER_TYPE_MAX,
 };
 
+const char *dither_get_name(u8 type);
 void dither_gray8_to_bw(u8 type, const u8 *src, u8 *dst, int width, int height);
 
 #endif /* __DETHER_H */
