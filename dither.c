@@ -15,13 +15,16 @@ struct dither {
 	void (*algo)(const u8 *src, u8 *dst, int width, int height);
 };
 
-#define DEFINE_DITHER(i, n, func) { .idx = i, .name = n, .algo = func }
+#define DEFINE_DITHER(i, n, func)                 \
+	{                                         \
+		.idx = i, .name = n, .algo = func \
+	}
 
 static const u8 bayer4x4[4][4] = {
-	{ 0, 128, 32, 160 },
-	{ 192, 64, 224, 96 },
-	{ 48, 176, 16, 144 },
-	{ 240, 112, 208, 80 },
+	{ 0x00, 0x80, 0x20, 0xA0 },
+	{ 0xC0, 0x40, 0xE0, 0x60 },
+	{ 0x30, 0xB0, 0x10, 0x90 },
+	{ 0xF0, 0x70, 0xD0, 0x50 },
 };
 
 static void __maybe_unused bayer_dither_4x4_gray8_to_bw(const u8 *src, u8 *dst,
@@ -32,7 +35,7 @@ static void __maybe_unused bayer_dither_4x4_gray8_to_bw(const u8 *src, u8 *dst,
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
 			idx = y * width + x;
-			threshold = bayer4x4[y & 3][x & 3];
+			threshold = bayer4x4[y & 0x03][x & 0x03];
 			dst[idx] = (src[idx] > threshold) ? 0xFF : 0x00;
 		}
 	}
