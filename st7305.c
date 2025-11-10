@@ -380,7 +380,8 @@ static ssize_t dither_type_store(struct device *dev,
 
 	st7305->dither_type = val;
 
-	dev_info(dev, "set dither type to %lu\n", val);
+	dev_info(dev, "set dither type to <%s>\n",
+		 dither_get_name(st7305->dither_type));
 
 	return count;
 }
