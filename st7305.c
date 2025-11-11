@@ -716,12 +716,6 @@ static int st7305_probe(struct spi_device *spi)
 		return PTR_ERR(dc);
 	}
 
-	dbidev->backlight = devm_of_find_backlight(dev);
-	if (IS_ERR(dbidev->backlight)) {
-		DRM_DEV_ERROR(dev, "Failed to get backlight device\n");
-		return PTR_ERR(dbidev->backlight);
-	}
-
 	device_property_read_u32(dev, "rotation", &rotation);
 	dev_info(dev, "rotation: %d\n", rotation);
 
