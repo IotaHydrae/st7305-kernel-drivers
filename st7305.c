@@ -290,9 +290,11 @@ static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
 	struct st7305 *st7305 = dbi_to_st7305(dbi);
+	struct spi_device *spi = dbi->spi;
 	const u8 *caset, *raset;
 	size_t bufsize;
 	int ret = 0;
+	void *tr;
 
 	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
 		      DRM_RECT_ARG(rect));
@@ -301,7 +303,8 @@ static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 	raset = st7305->desc->raset;
 	bufsize = st7305->desc->bufsize;
 
-	ret = st7305_buf_copy(dbidev->tx_buf, src, fb, rect, fmtcnv_state);
+	tr = dbidev->tx_buf;
+	ret = st7305_buf_copy(tr, src, fb, rect, fmtcnv_state);
 	if (ret)
 		goto err_msg;
 
@@ -309,8 +312,18 @@ static void st7305_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 
 	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, raset[0], raset[1]);
 
-	ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START,
-				   (u8 *)dbidev->tx_buf, bufsize);
+	/*
+	 * FIXME: Using `mipi_dbi_command_buf` to transmit data on
+	 * Raspberry Pi 5 may cause data misalignment for unknown reasons
+	 */
+	// ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START, tr,
+	// 			   bufsize);
+
+	mipi_dbi_command(dbi, MIPI_DCS_WRITE_MEMORY_START);
+	spi_bus_lock(spi->controller);
+	gpiod_set_value_cansleep(dbi->dc, 1);
+	mipi_dbi_spi_transfer(spi, spi->max_speed_hz, 8, tr, bufsize);
+	spi_bus_unlock(spi->controller);
 err_msg:
 	if (ret)
 		dev_err_once(fb->dev->dev, "Failed to update display %d\n",
