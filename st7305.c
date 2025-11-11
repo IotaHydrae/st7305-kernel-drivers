@@ -332,6 +332,9 @@ static void st7305_pipe_update(struct drm_simple_display_pipe *pipe,
 	if (!pipe->crtc.state->active)
 		return;
 
+	if (WARN_ON(!fb))
+		return;
+
 	if (!drm_dev_enter(fb->dev, &idx))
 		return;
 
