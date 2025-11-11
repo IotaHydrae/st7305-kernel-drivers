@@ -278,7 +278,7 @@ static int st7305_buf_copy(void *dst, struct iosys_map *src,
 
 	st7305_xrgb8888_to_mono(dst, src->vaddr, fb, clip, fmtcnv_state);
 
-	ret = drm_gem_fb_begin_cpu_access(fb, DMA_FROM_DEVICE);
+	drm_gem_fb_end_cpu_access(fb, DMA_FROM_DEVICE);
 
 	return ret;
 }
