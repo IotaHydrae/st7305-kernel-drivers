@@ -637,6 +637,7 @@ static const struct spi_device_id st7305_id[] = {
 	{ "ydp213h001-v3" },
 	{ "ydp290h001-v3" },
 	{ "ydp420h001-v3" },
+	{ "w290hc019mono-12z" },
 	{ "w420hc018mono-12z" },
 	{},
 };
