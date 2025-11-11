@@ -619,9 +619,13 @@ static struct drm_driver st7305_driver = {
 
 static const struct of_device_id st7305_of_match[] = {
 	{ .compatible = "sitronix,st7305", .data = &ydp290h001_v3_desc },
+
+	/* FIXME: The screen needs to load the driver twice before it can display content. */
 	{ .compatible = "osptek,ydp154h008-v3", .data = &ydp154h008_v3_desc },
-	{ .compatible = "osptek,ydp213h001-v3",
-	  .data = &ydp213h001_v3_desc }, /* FIXME: display freezes after a few seconds */
+
+	/* FIXME: display freezes after a few seconds */
+	{ .compatible = "osptek,ydp213h001-v3", .data = &ydp213h001_v3_desc },
+
 	{ .compatible = "osptek,ydp290h001-v3", .data = &ydp290h001_v3_desc },
 	{ .compatible = "osptek,ydp420h001-v3", .data = &ydp420h001_v3_desc },
 	{ .compatible = "wlk,w290hc019mono-12z", .data = &ydp290h001_v3_desc },
