@@ -582,19 +582,17 @@ static int ydp420h001_v3_init_seq(struct st7305 *st7305)
 	struct mipi_dbi *dbi = st7305->dbi;
 
 	mipi_dbi_command(dbi, 0xD6, 0x17, 0x02); // NVM Load Control
-	mipi_dbi_command(dbi, 0xC0, 0x12, 0x0A); // Gate Voltage Setting
+	mipi_dbi_command(dbi, 0xC0, 0x11, 0x04); // Gate Voltage Setting
 
-	mipi_dbi_command(dbi, 0xC1, 0x37, 0x3E, 0x3C,
-			 0x3C); // VSHP Setting (4.8V)
-	mipi_dbi_command(dbi, 0xC2, 0x00, 0x21, 0x23,
-			 0x23); // VSLP Setting (0.5V)
-	mipi_dbi_command(dbi, 0xC4, 50, 0x5C, 0x5A,
-			 0x5A); // VSHN Setting (-3.8V)
-	mipi_dbi_command(dbi, 0xC5, 50, 0x35, 0x37,
-			 0x37); // VSLN Setting (0.5V)
+	mipi_dbi_command(dbi, 0xC1, 0x37, 0X37, 0X37,
+			 0X37); // VSHP Setting (4.8V)
+	mipi_dbi_command(dbi, 0xC2, 0X19, 0X19, 0X19,
+			 0X19); // VSLP Setting (0.5V)
+	mipi_dbi_command(dbi, 0xC4, 0X41, 0X41, 0X41,
+			 0X41); // VSHN Setting (-3.8V)
+	mipi_dbi_command(dbi, 0xC5, 0X19, 0X19, 0X19,
+			 0X19); // VSLN Setting (0.5V)
 
-	mipi_dbi_command(dbi, 0x35, 0x00);
-	mipi_dbi_command(dbi, 0xD8, 0xA6, 0xE9);
 	mipi_dbi_command(dbi, 0xB0, 0x64); // Gate Line Setting: 400 line
 
 	return 0;
