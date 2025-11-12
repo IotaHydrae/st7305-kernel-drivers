@@ -765,10 +765,10 @@ static int st7305_remove(struct spi_device *spi)
 
 	DRM_DEBUG_KMS("\n");
 
+	sysfs_remove_group(&st7305->dev->kobj, &st7305_attr_group);
+
 	drm_dev_unplug(drm);
 	drm_atomic_helper_shutdown(drm);
-
-	sysfs_remove_group(&st7305->dev->kobj, &st7305_attr_group);
 
 	return 0;
 }
