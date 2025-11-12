@@ -403,6 +403,18 @@ static int ydp154h008_v3_init_seq(struct st7305 *st7305)
 	struct mipi_dbi *dbi = st7305->dbi;
 
 	mipi_dbi_command(dbi, 0xD6, 0x17, 0x02); // NVM Load Control
+	// Gate Voltage Setting, VGH: 12V, VGL: -6V
+	mipi_dbi_command(dbi, 0xC0, 0x08, 0x02);
+	// VSHP Setting (4.8V)
+	mipi_dbi_command(dbi, 0xC1, 0X19, 0X19, 0X19, 0X19);
+	// VSLP Setting (0.98V)
+	mipi_dbi_command(dbi, 0xC2, 0X31, 0X31, 0X31, 0X31);
+	// VSHN Setting (-3.6V)
+	mipi_dbi_command(dbi, 0xC4, 0X19, 0X19, 0X19, 0X19);
+	// VSLN Setting (0.22V)
+	mipi_dbi_command(dbi, 0xC5, 0X27, 0X27, 0X27, 0X27);
+	// mipi_dbi_command(dbi, 0xB3, 0xE5, 0xF6, 0x05, 0x46, 0x77, 0x77, 0x77,
+	// 		 0x77, 0x76, 0x45);
 	mipi_dbi_command(dbi, 0xB0, 0x32); // Gate Line Setting: 200 line
 
 	return 0;
