@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 
 ## TODOs: 待办事项
 
-- [ ] 支持 TE 引脚，防止画面撕裂
+- [x] 支持 TE 引脚，防止画面撕裂
 - [ ] 支持旋转
 
 ## 快速上手
