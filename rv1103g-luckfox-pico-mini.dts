@@ -68,7 +68,9 @@
 				/* tft_dc */
 				<1 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>,
 				/* tft_reset */
-				<1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+				<1 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>,
+				/* tft_te */
+				<1 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };
@@ -105,6 +107,7 @@
 
 		reset-gpios = <&gpio1 RK_PC3 GPIO_ACTIVE_HIGH>;
 		dc-gpios = <&gpio1 RK_PC4 GPIO_ACTIVE_HIGH>;
+		te-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
 
 		status = "okay";
 	};
