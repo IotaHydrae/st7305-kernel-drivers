@@ -49,6 +49,7 @@ struct st7305 {
 
 	/* TODO: support TE */
 	struct gpio_desc *te;
+	struct completion refresh_done;
 
 	u8 dither_type;
 
@@ -95,6 +96,14 @@ static inline void st7305_reset(struct mipi_dbi *dbi)
 	msleep(10);
 }
 
+static irqreturn_t st7305_irq_handler(int irq, void *dev_id)
+{
+	struct st7305 *st7305 = (struct st7305 *)dev_id;
+
+	complete(&st7305->refresh_done);
+	return IRQ_HANDLED;
+}
+
 static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 			       struct drm_crtc_state *crtc_state,
 			       struct drm_plane_state *plane_state)
@@ -102,13 +111,15 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(pipe->crtc.dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
 	struct st7305 *st7305 = dbi_to_st7305(dbi);
+	const u8 *caset, *raset;
 	u8 addr_mode;
 	int idx;
 
 	if (!drm_dev_enter(pipe->crtc.dev, &idx))
 		return;
 
-	DRM_DEBUG_KMS("\n");
+	caset = st7305->desc->caset;
+	raset = st7305->desc->raset;
 
 	st7305_reset(dbi);
 
@@ -159,9 +170,19 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 			 0x11); // 3 write for 24bit
 	mipi_dbi_command(dbi, 0xB9, 0x20); // Gamma Mode Setting
 	mipi_dbi_command(dbi, 0xB8, 0x29); // Panel Setting
+
+	mipi_dbi_command(dbi, MIPI_DCS_SET_COLUMN_ADDRESS, caset[0], caset[1]);
+	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, raset[0], raset[1]);
+
 	mipi_dbi_command(dbi, 0xD0, 0xFF); // Auto power down
 	mipi_dbi_command(dbi, 0x38); // High Power Mode on
 	mipi_dbi_command(dbi, 0xBB, 0x4F); // Enable Clear RAM
+
+	if (st7305->te)
+		mipi_dbi_command(dbi, 0x35, 0x00); // 0b00: TE v-blanking mode
+	else
+		mipi_dbi_command(dbi, 0x34); // TE off
+
 	mipi_dbi_command(dbi, MIPI_DCS_ENTER_INVERT_MODE);
 	mipi_dbi_command(dbi, MIPI_DCS_SET_DISPLAY_ON);
 
@@ -287,8 +308,7 @@ static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
-	struct st7305 *st7305 = dbi_to_st7305(dbi);
-	const u8 *caset, *raset;
+	struct st7305 *st7305 = dbi_to_st7305(&dbidev->dbi);
 	size_t bufsize;
 	int ret = 0;
 	int idx;
@@ -299,17 +319,17 @@ static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
 		      DRM_RECT_ARG(rect));
 
-	caset = st7305->desc->caset;
-	raset = st7305->desc->raset;
 	bufsize = st7305->desc->bufsize;
 
 	ret = st7305_buf_copy(dbidev->tx_buf, fb, rect);
 	if (ret)
 		goto err_msg;
 
-	mipi_dbi_command(dbi, MIPI_DCS_SET_COLUMN_ADDRESS, caset[0], caset[1]);
-
-	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, raset[0], raset[1]);
+	if (st7305->te) {
+		wait_for_completion_timeout(&st7305->refresh_done,
+					    msecs_to_jiffies(50));
+		reinit_completion(&st7305->refresh_done);
+	}
 
 	ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START,
 				   (u8 *)dbidev->tx_buf, bufsize);
@@ -485,7 +505,12 @@ static int ydp290h001_v3_init_seq(struct st7305 *st7305)
 {
 	struct mipi_dbi *dbi = st7305->dbi;
 
-	mipi_dbi_command(dbi, 0xD6, 0x13, 0x02); // NVM Load Control
+	mipi_dbi_command(dbi, 0xD6, 0x17, 0x02); // NVM Load Control
+
+	mipi_dbi_command(dbi, 0xD8, 0xA6, 0xE9);
+	// Frame Rate Control
+	mipi_dbi_command(dbi, 0xB2, 0x12); // HPM=32hz ; LPM=1hz
+
 	mipi_dbi_command(dbi, 0xB0, 0x60); // Gate Line Setting: 384 line
 
 	return 0;
@@ -669,6 +694,7 @@ static int st7305_probe(struct spi_device *spi)
 	u32 rotation = 0;
 	size_t bufsize;
 	int ret;
+	int irq;
 
 	st7305 = devm_kzalloc(dev, sizeof(*st7305), GFP_KERNEL);
 	if (IS_ERR(st7305))
@@ -703,6 +729,26 @@ static int st7305_probe(struct spi_device *spi)
 	if (IS_ERR(dbi->reset)) {
 		DRM_DEV_ERROR(dev, "Failed to get gpio 'reset'\n");
 		return PTR_ERR(dbi->reset);
+	}
+
+	st7305->te = devm_gpiod_get(dev, "te", GPIOD_IN);
+	if (IS_ERR(st7305->te)) {
+		DRM_DEV_INFO(dev, "Device doesn't support TE\b");
+		st7305->te = NULL;
+	}
+
+	if (st7305->te) {
+		dev_info(dev, "Device supports TE\n");
+		init_completion(&st7305->refresh_done);
+
+		irq = gpiod_to_irq(st7305->te);
+		ret = devm_request_threaded_irq(
+			dev, irq, NULL, st7305_irq_handler,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT, DRV_NAME "-te",
+			st7305);
+
+		if (ret)
+			return ret;
 	}
 
 	/*
