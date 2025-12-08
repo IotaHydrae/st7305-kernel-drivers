@@ -192,7 +192,100 @@ echo 2 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
 
 ---
 
-#### 4.2 （待办事项）运行 lvgl 演示
+#### 4.2 Cross compile fbv to preview bmp files on framebuffer
+
+```bash
+git clone https://github.com/smokku/fbv.git && cd fbv
+
+# assuming this is your luckfox pico sdk path
+export CC=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc
+
+vi Makefile
+# Replace the fllowing line
+# CC     = gcc
+# With the following line
+# CC     ?= gcc
+# Save and exit
+
+./configure --without-libungif --without-libpng --without-libjpeg
+make
+
+file fbv
+# If everything goes well, you should see the following output
+# fbv: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-uClibc.so.0, with debug_info, not stripped
+
+# Push files to the device
+adb push fbv /tmp
+adb push ~/Pictures/test.bmp /tmp
+
+# go to the device and run the following command
+cd /tmp
+./fbv -f test.bmp
+```
+
+#### 4.3 运行 lvgl 演示
+
+```bash
+git clone https://github.com/lvgl/lv_port_linux.git && cd lv_port_linux
+```
+
+modify the `main.c` file according to the fllowing:
+
+```diff
+diff --git a/main.c b/main.c
+index 5b997f6..bbc49ad 100644
+--- a/main.c
++++ b/main.c
+@@ -54,6 +54,9 @@ static void lv_linux_disp_init(void)
+     const char *device = getenv_default("LV_LINUX_FBDEV_DEVICE", "/dev/fb0");
+     lv_display_t * disp = lv_linux_fbdev_create();
+
++    lv_theme_t *theme = lv_theme_mono_init(disp, 0, &lv_font_montserrat_12);
++    lv_display_set_theme(disp, theme);
++
+ #if LV_USE_EVDEV
+     lv_linux_init_input_pointer(disp);
+ #endif
+```
+
+then build the lvgl demo
+```bash
+export CC=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc
+export CXX=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-g++
+
+mkdir -p build && cd build
+cmake .. -G Ninja
+
+ninja && adb push ../bin/lvglsim /tmp
+```
+
+Go to the device (e.g. via `adb shell`) and run the following command
+
+```bash
+cd /tmp
+./lvglsim
+```
+
+## Some useful tricks for debugging
+
+Automatically mount debugfs on startup
+```bash
+vi /etc/fstab
+# append the following line to the end of the file
+debugfs         /sys/kernel/debug       debugfs defaults        0       0
+```
+
+cat gpio debugfs to see the current state of the gpio pins
+```bash
+cat /sys/kernel/debug/gpio
+```
+
+View Interruption Information
+```bash
+cat /proc/interrupts | grep te
+# 61:      68330  rockchip_gpio_irq  21 Edge      st7305-te
+cat /sys/kernel/irq/61/per_cpu_count
+```
 
 ## 参考
 
