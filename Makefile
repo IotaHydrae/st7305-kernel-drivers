@@ -11,7 +11,7 @@ all:
 	make -C $(KERN_DIR) M=`pwd` modules
 
 clean:
-	make -C $(KERN_DIR) M=`pwd` modules clean
+	make -C $(KERN_DIR) M=`pwd` clean
 
 dtb:
 	dtc -@ -Hepapr -I dts -O dtb -o st7305-drmfb.dtbo st7305-drmfb.dts
@@ -22,7 +22,9 @@ dtb_load: dtb
 
 test: all
 	sudo rmmod $(MODULE_NAME).ko || true
+	sudo modprobe -r drm_mipi_dbi || true
+	sudo modprobe drm_mipi_dbi || true
 	sudo insmod $(MODULE_NAME).ko || true
 
 obj-m += $(MODULE_NAME).o
-$(MODULE_NAME)-y += st7305.o dither.o drm_mipi_dbi.o
+$(MODULE_NAME)-y += st7305.o dither.o

@@ -6,22 +6,20 @@
 
 - 支持多个屏幕型号
 
-
-| 硬件信息 |                                                                             |
-| -------- | --------------------------------------------------------------------------- |
-| 开发板   | Raspberry Pi Compute Model 4                                                |
-| 内核版本 | 6.12.47+rpt-rpi-v8                                                          |
-| 发行版   | Debian GNU/Linux 12 (bookworm)                                              |
-| 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200 |
-| -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250 |
-| -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384 |
-| - | [W290HC019MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpDu1mdlByTlb9U8Knb0Kg2E&skuId=5706172761739&spm=tbpc.boughtlist.suborder_itemtitle.1.16b02e8dATbioT) 2.90" Mono 168x384 |
-| - | [W420HC018MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpJD3qW3wnoilcGBA0fK5Eus&skuId=5724504589973&spm=tbpc.boughtlist.suborder_itemtitle.1.6f4d2e8dbWO3RS) 4.20" Mono 300x400 |
-| 驱动IC   | ST7305                                                                      |
+| 硬件信息 |                                                                                                                                                                                                                            |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 开发板   | Raspberry Pi 5B                                                                                                                                                                                                            |
+| 内核版本 | rpi-6.18.y                                                                                                                                                                                                                 |
+| 发行版   | Debian GNU/Linux 13 (trixie)                                                                                                                                                                                               |
+| 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200                                                                                                                                                |
+| -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250                                                                                                                                                |
+| -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384                                                                                                                                                |
+| -        | [W290HC019MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpDu1mdlByTlb9U8Knb0Kg2E&skuId=5706172761739&spm=tbpc.boughtlist.suborder_itemtitle.1.16b02e8dATbioT) 2.90" Mono 168x384 |
+| -        | [W420HC018MONO-12Z](https://item.taobao.com/item.htm?id=871831722804&mi_id=0000vBUbFkosMzENLINW0DNEpJD3qW3wnoilcGBA0fK5Eus&skuId=5724504589973&spm=tbpc.boughtlist.suborder_itemtitle.1.6f4d2e8dbWO3RS) 4.20" Mono 300x400 |
+| 驱动IC   | ST7305                                                                                                                                                                                                                     |
 | -        | -                                                                                                                                                                                                                          |
 | 显示屏   | [YDP420H001-V3](https://yuyinglcd.com/products/1/17/262) 4.20" Mono 300x400                                                                                                                                                |
 | 驱动IC   | ST7306                                                                                                                                                                                                                     |
-
 
 ![bmo](./assets/ydp154h008_v3_bmo.jpg)![stress](./assets/ydp213h001_v3_stress.jpg)
 ![widgets](./assets/ydp290h001_v3_widgets.jpg)![widgets](./assets/ydp420h001_v3_widgets.jpg)
@@ -73,6 +71,23 @@ sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.bak
 echo "dtoverlay=st7305-drmfb" | sudo tee -a /boot/firmware/config.txt
 ```
 
+### 驱动运行时参数
+
+#### 抖动类型(dither_type)
+
+参考 [dither.h](./dither.h) 头文件中的取值，这是一个示例，未来可能支持更多抖动算法
+
+```bash
+enum {
+	DITHER_TYPE_NONE,
+	DITHER_TYPE_BAYER_4X4,
+	DITHER_TYPE_BAYER_16X16,
+	DITHER_TYPE_MAX,
+};
+
+echo 1 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
+```
+
 ### 安装桌面环境
 
 ```bash
@@ -98,11 +113,11 @@ EndSection
 #### 2. xserver 使用 modesetting 驱动显示
 
 ```bash
-sudo vim /usr/share/X11/xorg.conf.d/99-fbdev.conf
+sudo vim /usr/share/X11/xorg.conf.d/10-tinydrm.conf
 
 # 将如下内容复制到文件中
 Section "Device"
-    Identifier "TinyDRM Display"
+    Identifier "ST7305"
     Driver "modesetting"
     Option "AccelMethod" "glamor"
     Option "kmsdev" "/dev/dri/card2"
@@ -117,6 +132,7 @@ EndSection
 ### 一些有用的命令
 
 开关控制台光标闪烁
+
 ```
 echo 0 | sudo tee /sys/class/graphics/fbcon/cursor_blink
 echo 1 | sudo tee /sys/class/graphics/fbcon/cursor_blink

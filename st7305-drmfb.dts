@@ -21,6 +21,7 @@
 				// compatible = "osptek,ydp213h001-v3";
 				// compatible = "osptek,ydp290h001-v3";
 				compatible = "osptek,ydp420h001-v3";
+				// compatible = "wlk,w420hc018mono-12z";
 				reg = <0>;
 				spi-max-frequency = <50000000>;
 				spi-cpol;

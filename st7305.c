@@ -32,6 +32,7 @@
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_simple_kms_helper.h>
 #include <drm/drm_gem_atomic_helper.h>
+#include <drm/clients/drm_client_setup.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 
 #include "dither.h"
@@ -634,10 +635,10 @@ static struct drm_driver st7305_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
 	.fops = &st7305_fops,
 	DRM_GEM_DMA_DRIVER_OPS_VMAP,
+	DRM_FBDEV_DMA_DRIVER_OPS,
 	.debugfs_init = mipi_dbi_debugfs_init,
 	.name = "st7305",
 	.desc = "Sitronix ST7305",
-	.date = "20251022",
 	.major = 1,
 	.minor = 0,
 };
@@ -756,7 +757,7 @@ static int st7305_probe(struct spi_device *spi)
 	spi_set_drvdata(spi, st7305);
 	dev_set_drvdata(dev, st7305);
 
-	drm_fbdev_dma_setup(drm, 0);
+	drm_client_setup(drm, NULL);
 
 	ret = sysfs_create_group(&dev->kobj, &st7305_attr_group);
 	if (ret)
