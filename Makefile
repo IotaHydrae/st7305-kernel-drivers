@@ -5,7 +5,7 @@ KERN_DIR := ${HOME}/luckfox/pico/sysdrv/source/objs_kernel
 all:
 	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=`pwd` modules
 clean:
-	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=`pwd` modules clean
+	make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(KERN_DIR) M=`pwd` clean
 
 clena: clean
 #CFLAGS_$(MODULE_NAME).o := -DDEBUG
