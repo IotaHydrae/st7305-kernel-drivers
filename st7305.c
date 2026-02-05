@@ -22,10 +22,12 @@
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_damage_helper.h>
 #include <drm/drm_drv.h>
-#include <drm/drm_fb_cma_helper.h>
+#include <drm/drm_fb_dma_helper.h>
 #include <drm/drm_fb_helper.h>
+#include <drm/drm_framebuffer.h>
 #include <drm/drm_format_helper.h>
-#include <drm/drm_gem_cma_helper.h>
+#include <drm/drm_gem_dma_helper.h>
+#include <drm/drm_gem_atomic_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 #include <drm/drm_managed.h>
 #include <drm/drm_mipi_dbi.h>
@@ -43,7 +45,7 @@
 
 struct st7305 {
 	struct device *dev;
-	struct mipi_dbi_dev *dbidev;
+	struct mipi_dbi_dev dbidev;
 	struct mipi_dbi *dbi;
 	struct drm_device *drm;
 
@@ -81,19 +83,7 @@ static inline struct st7305 *dbi_to_st7305(struct mipi_dbi *dbi)
 
 static inline struct st7305 *dbidev_to_st7305(struct mipi_dbi_dev *dbidev)
 {
-	return dbi_to_st7305(&dbidev->dbi);
-}
-
-/*
- * The device tree node may specify the wrong GPIO
- * active behavior, hard-coded as low active here
- */
-static inline void st7305_reset(struct mipi_dbi *dbi)
-{
-	gpiod_set_raw_value(dbi->reset, 0);
-	msleep(10);
-	gpiod_set_raw_value(dbi->reset, 1);
-	msleep(10);
+	return container_of(dbidev, struct st7305, dbidev);
 }
 
 static irqreturn_t st7305_irq_handler(int irq, void *dev_id)
@@ -110,10 +100,11 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(pipe->crtc.dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
-	struct st7305 *st7305 = dbi_to_st7305(dbi);
+	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
 	const u8 *caset, *raset;
 	u8 addr_mode;
 	int idx;
+	int ret;
 
 	if (!drm_dev_enter(pipe->crtc.dev, &idx))
 		return;
@@ -121,7 +112,9 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 	caset = st7305->desc->caset;
 	raset = st7305->desc->raset;
 
-	st7305_reset(dbi);
+	ret = mipi_dbi_poweron_reset(dbidev);
+	if (ret)
+		goto out_exit;
 
 	mipi_dbi_command(dbi, 0xD1, 0x01); // Booster Enable
 	mipi_dbi_command(dbi, 0xC0, 0x12, 0x0A); // Gate Voltage Setting
@@ -188,6 +181,7 @@ static void st7305_pipe_enable(struct drm_simple_display_pipe *pipe,
 
 	st7305->desc->init_seq(st7305);
 
+out_exit:
 	drm_dev_exit(idx);
 }
 
@@ -243,6 +237,7 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 	void (*draw_pixel)(u8 *dst, uint x, uint y, u8 left_offset,
 			   u8 page_size, u8 gray);
 	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
+	struct iosys_map dst_map, vmap;
 	u8 *src, *buf, *dither_buf;
 	u8 offset, page_size;
 	unsigned int x, y;
@@ -251,7 +246,9 @@ static void st7305_xrgb8888_to_mono(u8 *dst, void *vaddr,
 	if (!buf)
 		return;
 
-	drm_fb_xrgb8888_to_gray8(buf, vaddr, fb, clip);
+	iosys_map_set_vaddr(&dst_map, buf);
+	iosys_map_set_vaddr(&vmap, vaddr);
+	drm_fb_xrgb8888_to_gray8(&dst_map, NULL, &vmap, fb, clip);
 	src = buf;
 
 	if (st7305->dither_type > 0) {
@@ -283,23 +280,17 @@ free_buf:
 static int st7305_buf_copy(void *dst, struct drm_framebuffer *fb,
 			   struct drm_rect *clip)
 {
-	struct drm_gem_cma_object *cma_obj = drm_fb_cma_get_gem_obj(fb, 0);
-	struct dma_buf_attachment *import_attach = cma_obj->base.import_attach;
-	void *src = cma_obj->vaddr;
+	struct drm_gem_dma_object *dma_obj = drm_fb_dma_get_gem_obj(fb, 0);
+	void *src = dma_obj->vaddr;
 	int ret = 0;
 
-	if (import_attach) {
-		ret = dma_buf_begin_cpu_access(import_attach->dmabuf,
-					       DMA_FROM_DEVICE);
-		if (ret)
-			return ret;
-	}
+	ret = drm_gem_fb_begin_cpu_access(fb, DMA_FROM_DEVICE);
+	if (ret)
+		return ret;
 
 	st7305_xrgb8888_to_mono(dst, src, fb, clip);
 
-	if (import_attach)
-		ret = dma_buf_end_cpu_access(import_attach->dmabuf,
-					     DMA_FROM_DEVICE);
+	drm_gem_fb_end_cpu_access(fb, DMA_FROM_DEVICE);
 
 	return ret;
 }
@@ -308,9 +299,11 @@ static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct mipi_dbi *dbi = &dbidev->dbi;
-	struct st7305 *st7305 = dbi_to_st7305(&dbidev->dbi);
+	struct st7305 *st7305 = dbidev_to_st7305(dbidev);
+	const u8 *caset, *raset;
 	size_t bufsize;
 	int ret = 0;
+	void *tr;
 	int idx;
 
 	if (!drm_dev_enter(fb->dev, &idx))
@@ -319,20 +312,22 @@ static void st7305_fb_dirty(struct drm_framebuffer *fb, struct drm_rect *rect)
 	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
 		      DRM_RECT_ARG(rect));
 
+	caset = st7305->desc->caset;
+	raset = st7305->desc->raset;
 	bufsize = st7305->desc->bufsize;
 
+	tr = dbidev->tx_buf;
 	ret = st7305_buf_copy(dbidev->tx_buf, fb, rect);
 	if (ret)
 		goto err_msg;
 
-	if (st7305->te) {
-		wait_for_completion_timeout(&st7305->refresh_done,
-					    msecs_to_jiffies(50));
-		reinit_completion(&st7305->refresh_done);
-	}
+	mipi_dbi_command(dbi, MIPI_DCS_SET_COLUMN_ADDRESS, caset[0], caset[1]);
 
-	ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START,
-				   (u8 *)dbidev->tx_buf, bufsize);
+	mipi_dbi_command(dbi, MIPI_DCS_SET_PAGE_ADDRESS, raset[0], raset[1]);
+
+	ret = mipi_dbi_command_buf(dbi, MIPI_DCS_WRITE_MEMORY_START, tr,
+				   bufsize);
+
 err_msg:
 	if (ret)
 		dev_err_once(fb->dev->dev, "Failed to update display %d\n",
@@ -358,10 +353,11 @@ static void st7305_pipe_update(struct drm_simple_display_pipe *pipe,
 		rect.y1 = 0;
 		rect.x2 = fb->width;
 		rect.y2 = fb->height;
-		st7305_fb_dirty(fb, &rect);
+		st7305_fb_dirty(state->fb, &rect);
 	} else {
-		if (drm_atomic_helper_damage_merged(old_state, state, &rect))
-			st7305_fb_dirty(fb, &rect);
+		if (drm_atomic_helper_damage_merged(old_state, state, &rect)) {
+			st7305_fb_dirty(state->fb, &rect);
+		}
 	}
 }
 
@@ -373,7 +369,6 @@ static const struct drm_simple_display_pipe_funcs st7305_pipe_funcs = {
 	.enable = st7305_pipe_enable,
 	.disable = st7305_pipe_disable,
 	.update = st7305_pipe_update,
-	.prepare_fb = drm_gem_fb_simple_display_pipe_prepare_fb,
 };
 
 static ssize_t dither_type_show(struct device *dev,
@@ -637,12 +632,12 @@ static const struct st7305_panel_desc ydp420h001_v3_desc = {
 	.draw_pixel = st7306_draw_pixel,
 };
 
-DEFINE_DRM_GEM_CMA_FOPS(st7305_fops);
+DEFINE_DRM_GEM_DMA_FOPS(st7305_fops);
 
 static struct drm_driver st7305_driver = {
 	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
 	.fops = &st7305_fops,
-	DRM_GEM_CMA_DRIVER_OPS_VMAP,
+	DRM_GEM_DMA_DRIVER_OPS_VMAP,
 	.debugfs_init = mipi_dbi_debugfs_init,
 	.name = "st7305",
 	.desc = "Sitronix ST7305",
@@ -696,20 +691,17 @@ static int st7305_probe(struct spi_device *spi)
 	int ret;
 	int irq;
 
-	st7305 = devm_kzalloc(dev, sizeof(*st7305), GFP_KERNEL);
+	st7305 = devm_drm_dev_alloc(dev, &st7305_driver, struct st7305,
+				    dbidev.drm);
 	if (IS_ERR(st7305))
-		return -ENOMEM;
+		return PTR_ERR(st7305);
 
-	dbidev = devm_drm_dev_alloc(dev, &st7305_driver, struct mipi_dbi_dev,
-				    drm);
-	if (IS_ERR(dbidev))
-		return PTR_ERR(dbidev);
+	dbidev = &st7305->dbidev;
 
 	dbi = &dbidev->dbi;
 	drm = &dbidev->drm;
 
 	st7305->dev = dev;
-	st7305->dbidev = dbidev;
 	st7305->drm = drm;
 	st7305->dbi = dbi;
 	st7305->desc = device_get_match_data(dev);
@@ -725,7 +717,7 @@ static int st7305_probe(struct spi_device *spi)
 	bufsize = st7305->desc->bufsize;
 	dev_info(dev, "bufsize: %zu (bytes)\n", bufsize);
 
-	dbi->reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
+	dbi->reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(dbi->reset)) {
 		DRM_DEV_ERROR(dev, "Failed to get gpio 'reset'\n");
 		return PTR_ERR(dbi->reset);
@@ -751,15 +743,6 @@ static int st7305_probe(struct spi_device *spi)
 			return ret;
 	}
 
-	/*
-	 * we are using 8-bit data, so we are not actually swapping anything,
-	 * but setting mipi->swap_bytes makes mipi_dbi_typec3_command() do the
-	 * right thing and not use 16-bit transfers (which results in swapped
-	 * bytes on little-endian systems and causes out of order data to be
-	 * sent to the display).
-	 */
-	dbi->swap_bytes = true;
-
 	dc = devm_gpiod_get(dev, "dc", GPIOD_OUT_LOW);
 	if (IS_ERR(dc)) {
 		DRM_DEV_ERROR(dev, "Failed to get gpio 'dc'\n");
@@ -783,6 +766,15 @@ static int st7305_probe(struct spi_device *spi)
 	if (ret)
 		return ret;
 
+	/*
+	 * we are using 8-bit data, so we are not actually swapping anything,
+	 * but setting mipi->swap_bytes makes mipi_dbi_typec3_command() do the
+	 * right thing and not use 16-bit transfers (which results in swapped
+	 * bytes on little-endian systems and causes out of order data to be
+	 * sent to the display).
+	 */
+	dbi->swap_bytes = true;
+
 	drm_mode_config_reset(drm);
 
 	ret = drm_dev_register(drm, 0);
@@ -804,19 +796,15 @@ static int st7305_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int st7305_remove(struct spi_device *spi)
+static void st7305_remove(struct spi_device *spi)
 {
 	struct st7305 *st7305 = spi_get_drvdata(spi);
 	struct drm_device *drm = st7305->drm;
-
-	DRM_DEBUG_KMS("\n");
 
 	sysfs_remove_group(&st7305->dev->kobj, &st7305_attr_group);
 
 	drm_dev_unplug(drm);
 	drm_atomic_helper_shutdown(drm);
-
-	return 0;
 }
 
 static void st7305_shutdown(struct spi_device *spi)

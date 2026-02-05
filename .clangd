@@ -1,2 +1,2 @@
 CompileFlags:
-  Remove: [-fconserve-stack, -fno-ipa-sra]
+  Remove: [-fconserve-stack, -fno-allow-store-data-races, -mindirect-branch-register, -mindirect-branch=thunk-extern, -mpreferred-stack-boundary=3, -mrecord-mcount, -fno-ipa-sra, -mno-fdpic]

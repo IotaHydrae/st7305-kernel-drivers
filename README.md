@@ -3,10 +3,10 @@
 [English](README.en.md)
 
 | 硬件信息 |                                                                                                                                                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 开发板   | Luckfox Pico Mini                                                                                                                                                                                                          |
-| 内核版本 | 5.10.160                                                                                                                                                                                                                   |
-| 发行版   | Buildroot 2023.02.6                                                                                                                                                                                                        |
+|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 开发板   | Luckfox Lyra                                                                                                                                                                                                               |
+| 内核版本 | 6.1.99                                                                                                                                                                                                                     |
+| 发行版   | Buildroot 2024.02                                                                                                                                                                                                          |
 | 显示屏   | [YDP154H008-V3](https://yuyinglcd.com/products/1/17/500) 1.54" Mono 200x200                                                                                                                                                |
 | -        | [YDP213H001-V3](https://yuyinglcd.com/products/1/17/260) 2.13" Mono 122x250                                                                                                                                                |
 | -        | [YDP290H001-V3](https://yuyinglcd.com/products/1/17/261) 2.90" Mono 168x384                                                                                                                                                |
@@ -36,67 +36,18 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 
 以下步骤假设您使用的是 YDP290H001-V3 显示屏。
 
-| 屏幕引脚定义 | Luckfox Pico 的引脚     |
-| ------------ | ----------------------- |
-| GND          | GND                     |
-| VCC          | 3.3V                    |
-| SCL          | SPI0_CLK_M0 - GPIO1_C1  |
-| SDA          | SPI0_MOSI_M1 - GPIO1_C2 |
-| RES          | GPIO1_C3                |
-| DC           | GPIO1_C4                |
-| CS           | SPI0_CS0_M0 - GPIO1_C0  |
-| (TE)         | GPIO1_C5                |
+| Display | Luckfox Lyra Pins | RMIO    | Function  | DTS                            |
+|---------|-------------------|---------|-----------|--------------------------------|
+| GND     | GND               | -       | -         | -                              |
+| VCC     | 3.3V              | -       | -         | -                              |
+| SCL     | GPIO1_D1          | RMIO_29 | SPI0_CLK  | rm_io29_spi0_clk               |
+| SDA     | GPIO1_C3          | RMIO_28 | SPI0_MOSI | rm_io28_spi0_mosi              |
+| RES     | GPIO0_A2          | RMIO_2  | GPIO      | &gpio0 RK_PA2 GPIO_ACTIVE_HIGH |
+| DC      | GPIO0_A3          | RMIO_3  | GPIO      | &gpio0 RK_PA3 GPIO_ACTIVE_HIGH |
+| CS      | GPIO0_A4          | RMIO_4  | SPI0_CS0  | rm_io4_spi0_csn0               |
+| (TE)    | GPIO0_A5          | RMIO_5  | GPIO      | &gpio0 RK_PA5 GPIO_ACTIVE_HIGH |
 
-### 1. 部署 Luckfox Pico SDK
-
-强烈建议您在继续操作之前查看 [SDK 编译指南](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/SDK-Image-Compilation)。
-
-```bash
-mkdir -p ~/luckfox && cd ~/luckfox
-git clone https://gitee.com/LuckfoxTECH/luckfox-pico.git pico
-cd pico
-```
-
-根据 luckfox pico wiki 的说明，您需要安装以下软件包：
-
-```bash
-sudo apt-get install -y git ssh make gcc gcc-multilib g++-multilib module-assistant expect g++ gawk texinfo libssl-dev bison flex fakeroot cmake unzip gperf autoconf device-tree-compiler libncurses5-dev pkg-config bc python-is-python3 passwd openssl openssh-server openssh-client vim file cpio rsync curl
-```
-
-然后按照以下步骤配置 SDK：
-
-```bash
-❯ ./build.sh lunch
-You're building on Linux
-  Lunch menu...pick the Luckfox Pico hardware version:
-  选择 Luckfox Pico 硬件版本:
-                [0] RV1103_Luckfox_Pico
-                [1] RV1103_Luckfox_Pico_Mini
-                [2] RV1103_Luckfox_Pico_Plus
-                [3] RV1103_Luckfox_Pico_WebBee
-                [4] RV1106_Luckfox_Pico_Pro_Max
-                [5] RV1106_Luckfox_Pico_Ultra
-                [6] RV1106_Luckfox_Pico_Ultra_W
-                [7] RV1106_Luckfox_Pico_Pi
-                [8] RV1106_Luckfox_Pico_Pi_W
-                [9] RV1106_Luckfox_Pico_86Panel
-                [10] RV1106_Luckfox_Pico_86Panel_W
-                [11] RV1106_Luckfox_Pico_Zero
-                [12] custom
-Which would you like? [0~12][default:0]: 1
-  Lunch menu...pick the boot medium:
-  选择启动媒介:
-                [0] SD_CARD
-                [1] SPI_NAND
-Which would you like? [0~1][default:0]: 0
-  Lunch menu...pick the system version:
-  选择系统版本:
-                [0] Buildroot
-Which would you like? [0][default:0]: 0
-[build.sh:info] Lunching for Default BoardConfig_IPC/BoardConfig-SD_CARD-Buildroot-RV1103_Luckfox_Pico_Mini-IPC.mk boards...
-[build.sh:info] switching to board: /home/developer/luckfox/pico/project/cfg/BoardConfig_IPC/BoardConfig-SD_CARD-Buildroot-RV1103_Luckfox_Pico_Mini-IPC.mk
-[build.sh:info] Running build_select_board succeeded.
-```
+### 1. 部署 Luckfox Lyra SDK
 
 至少编译一次内核和驱动程序：
 
@@ -111,11 +62,11 @@ Which would you like? [0][default:0]: 0
 
 ```bash
 cd ~/luckfox
-git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git
+git clone https://github.com/IotaHydrae/st7305-kernel-drivers.git -b luckfox-lyra --depth 1
 cd st7305-kernel-drivers
 ```
 
-如果您使用的是其他显示器，请先修改 dts 文件（`rv1103g-luckfox-pico-mini.dts`）中的兼容字符串。
+如果您使用的是其他显示器，请先修改 dts 文件 (`rk3506g-luckfox-lyra-sd.dts`) 中的兼容字符串。
 
 ```c
 	tft: st7305@0 {
@@ -130,34 +81,26 @@ cd st7305-kernel-drivers
 	};
 ```
 
-另外，如果您需要帧缓冲区控制台功能，则需要确保保留此 DTS 节点：
-
-```c
-chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=tty0 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
-	};
-```
-
-将 dts 文件复制到 Luckfox Pico SDK
+将 dts 文件复制到 Luckfox Lyra SDK
 
 ```bash
-cp rv1103g-luckfox-pico-mini.dts ~/luckfox/pico/sysdrv/source/kernel/arch/arm/boot/dts/rv1103g-luckfox-pico-mini.dts
+cp rk3506g-luckfox-lyra-sd.dts ~/luckfox/lyra/kernel-6.1/arch/arm/boot/dts/rk3506g-luckfox-lyra-sd.dts
 ```
 
-### 3. 构建并刷写新的内核镜像到 Luckfox Pico
+### 3. 构建并刷写新的内核镜像到 Luckfox Lyra
 
-返回 Luckfox Pico SDK 并构建新的内核镜像
+返回 Luckfox Lyra SDK 并构建新的内核镜像
 
 ```bash
-cd ~/luckfox/pico
+cd ~/luckfox/lyra
 ./build.sh kernel
 ```
 
-运行以下命令重新刷写新的内核镜像文件 `output/image/boot.img`：
+运行以下命令重新刷写新的内核镜像 `kernel-6.1/zboot.img`：
 
 ```bash
-adb push output/image/boot.img /tmp
-adb shell 'dd if=/tmp/boot.img of=/dev/mmcblk1p4 bs=1M'
+adb push kernel-6.1/zboot.img /tmp
+adb shell 'dd if=/tmp/zboot.img of=/dev/mmcblk0p2 bs=1M'
 adb reboot
 ```
 
@@ -192,71 +135,58 @@ echo 2 > /sys/class/spi_master/spi0/spi0.0/config/dither_type
 
 ---
 
-#### 4.2 Cross compile fbv to preview bmp files on framebuffer
-
-```bash
-git clone https://github.com/smokku/fbv.git && cd fbv
-
-# assuming this is your luckfox pico sdk path
-export CC=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc
-
-vi Makefile
-# Replace the fllowing line
-# CC     = gcc
-# With the following line
-# CC     ?= gcc
-# Save and exit
-
-./configure --without-libungif --without-libpng --without-libjpeg
-make
-
-file fbv
-# If everything goes well, you should see the following output
-# fbv: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-uClibc.so.0, with debug_info, not stripped
-
-# Push files to the device
-adb push fbv /tmp
-adb push ~/Pictures/test.bmp /tmp
-
-# go to the device and run the following command
-cd /tmp
-./fbv -f test.bmp
-```
-
-#### 4.3 运行 lvgl 演示
+#### 4.2 运行 lvgl 演示
 
 ```bash
 git clone https://github.com/lvgl/lv_port_linux.git && cd lv_port_linux
+git submodule update --init
 ```
 
-modify the `main.c` file according to the fllowing:
+disable `evdev` feature of lvgl (requires `libevdev`)
+```diff
+diff --git a/lv_conf.defaults b/lv_conf.defaults
+index e4a749e..21c139c 100644
+--- a/lv_conf.defaults
++++ b/lv_conf.defaults
+@@ -55,7 +55,7 @@ LV_WAYLAND_USE_DMABUF           0
+ LV_USE_GLFW 0
+
+ # Input support (enable when using FBDEV or DRM)
+-LV_USE_EVDEV    1
++LV_USE_EVDEV    0
+ LV_USE_LIBINPUT 0
+
+ # Auxiliary drivers
+```
+
+modify the `src/lib/display_backends/fbdev.c` file according to the fllowing:
 
 ```diff
-diff --git a/main.c b/main.c
-index 5b997f6..bbc49ad 100644
---- a/main.c
-+++ b/main.c
-@@ -54,6 +54,9 @@ static void lv_linux_disp_init(void)
-     const char *device = getenv_default("LV_LINUX_FBDEV_DEVICE", "/dev/fb0");
-     lv_display_t * disp = lv_linux_fbdev_create();
+diff --git a/src/lib/display_backends/fbdev.c b/src/lib/display_backends/fbdev.c
+index f330fd8..36dd1c1 100644
+--- a/src/lib/display_backends/fbdev.c
++++ b/src/lib/display_backends/fbdev.c
+@@ -92,6 +92,9 @@ static lv_display_t * init_fbdev(void)
+         return NULL;
+     }
 
 +    lv_theme_t *theme = lv_theme_mono_init(disp, 0, &lv_font_montserrat_12);
 +    lv_display_set_theme(disp, theme);
 +
- #if LV_USE_EVDEV
-     lv_linux_init_input_pointer(disp);
- #endif
+     lv_linux_fbdev_set_file(disp, device);
+
+     return disp;
 ```
 
 then build the lvgl demo
 ```bash
-export CC=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-gcc
-export CXX=/home/developer/luckfox/pico/tools/linux/toolchain/arm-rockchip830-linux-uclibcgnueabihf/bin/arm-rockchip830-linux-uclibcgnueabihf-g++
+export CC=${HOME}/luckfox/lyra/prebuilts/gcc/linux-x86/arm/gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc
+export CXX=${HOME}/luckfox/lyra/prebuilts/gcc/linux-x86/arm/gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-g++
 
 mkdir -p build && cd build
 cmake .. -G Ninja
 
-ninja && adb push ../bin/lvglsim /tmp
+ninja && adb push bin/lvglsim /tmp
 ```
 
 Go to the device (e.g. via `adb shell`) and run the following command
@@ -289,8 +219,8 @@ cat /sys/kernel/irq/61/per_cpu_count
 
 ## 参考
 
-1. [kernel 5.10.160 source](https://elixir.bootlin.com/linux/v5.10.160/source)
-2. [Luckfox Pico Wiki - Pinout](https://wiki.luckfox.com/zh/Luckfox-Pico-Plus-Mini/Pinout)
+1. [kernel 6.1.99 source](https://elixir.bootlin.com/linux/v6.1.99/source)
+2. [Luckfox Lyra Wiki - Pinout](https://wiki.luckfox.com/zh/Luckfox-Lyra/Pinout)
 3. [ST7305 datasheet](https://admin.osptek.com/uploads/ST_7305_V0_2_d0b99d9cdb.pdf)
 4. [DuRuofu's st7305 drivers for esp32](https://github.com/DuRuofu/esp-idf-st7305-Ink-screen)
 

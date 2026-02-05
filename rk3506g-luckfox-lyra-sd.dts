@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3506-luckfox-lyra.dtsi"
+
+/ {
+	model = "Luckfox Lyra";
+	compatible = "rockchip,rk3506g-demo-display-control", "rockchip,rk3506";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0a0000 console=tty1 console=ttyFIQ0 storagemedia=sd root=/dev/mmcblk0p3 rootfstype=ext4 rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1";
+	};
+};
+
+/**********display**********/
+&cma {
+	size = <0x2000000>;
+};
+
+&dsi {
+	status = "disabled";
+};
+
+&dsi_dphy {
+	status = "disabled";
+};
+
+&dsi_in_vop {
+	status = "disabled";
+};
+
+&route_dsi {
+	status = "disabled";
+};
+
+&dsi_panel {
+	status = "disabled";
+};
+
+/**********ethernet**********/
+&gmac1 {
+	status = "disabled";
+};
+
+&mdio1 {
+	status = "disabled";
+};
+
+/**********usb**********/
+&usb20_otg0 {
+	dr_mode = "peripheral";
+	status = "okay";
+};
+
+&usb20_otg1 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&pinctrl {
+	tft {
+		tft_pins: tft-pins {
+			rockchip,pins = <0 RK_PA2 RK_FUNC_GPIO &pcfg_pull_none>, // reset
+					<0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>; // dc
+		};
+	};
+};
+
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io29_spi0_clk &rm_io28_spi0_mosi &rm_io4_spi0_csn0>;
+
+	status = "okay";
+
+	tft: st7305@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&tft_pins>;
+
+		// compatible = "osptek,ydp154h008-v3";
+		// compatible = "osptek,ydp213h001-v3";
+		compatible = "osptek,ydp290h001-v3";
+		// compatible = "osptek,ydp420h001-v3";
+
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+
+		reset-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
+		dc-gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
+
+		status = "okay";
+	};
+};
