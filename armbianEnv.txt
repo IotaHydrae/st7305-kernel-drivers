@@ -1,0 +1,9 @@
+verbosity=1
+bootlogo=false
+console=both
+disp_mode=1920x1080p60
+overlay_prefix=sun8i-h3
+rootdev=UUID=c8a78f05-cc75-4985-a1b3-b0b16465824d
+rootfstype=ext4
+overlays=cpu-clock-1.368GHz-1.3v i2c0 spi-st7305-drm
+usbstoragequirks=0x2537:0x1066:u,0x2537:0x1068:u

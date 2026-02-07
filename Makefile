@@ -11,14 +11,14 @@ all:
 	make -C $(KERN_DIR) M=`pwd` modules
 
 clean:
-	make -C $(KERN_DIR) M=`pwd` modules clean
+	make -C $(KERN_DIR) M=`pwd` clean
 
 dtb:
-	dtc -@ -Hepapr -I dts -O dtb -o st7305-drmfb.dtbo st7305-drmfb.dts
+	dtc -@ -I dts -O dtb -o sun8i-h3-spi-st7305-drm.dtbo sun8i-h3-spi-st7305-drm.dts
 	make -C overlays
 
-dtb_load: dtb
-	sudo dtoverlay ./st7305-drmfb.dtbo
+dtb_store: dtb
+	sudo cp sun8i-h3-spi-st7305-drm.dtbo /boot/dtb/overlay/
 
 test: all
 	sudo rmmod $(MODULE_NAME).ko || true

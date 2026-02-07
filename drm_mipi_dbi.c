@@ -31,12 +31,12 @@
 
 #define MIPI_DBI_MAX_SPI_READ_SPEED 2000000 /* 2MHz */
 
-#define DCS_POWER_MODE_DISPLAY BIT(2)
-#define DCS_POWER_MODE_DISPLAY_NORMAL_MODE BIT(3)
-#define DCS_POWER_MODE_SLEEP_MODE BIT(4)
-#define DCS_POWER_MODE_PARTIAL_MODE BIT(5)
-#define DCS_POWER_MODE_IDLE_MODE BIT(6)
-#define DCS_POWER_MODE_RESERVED_MASK (BIT(0) | BIT(1) | BIT(7))
+#define DCS_POWER_MODE_DISPLAY			BIT(2)
+#define DCS_POWER_MODE_DISPLAY_NORMAL_MODE	BIT(3)
+#define DCS_POWER_MODE_SLEEP_MODE		BIT(4)
+#define DCS_POWER_MODE_PARTIAL_MODE		BIT(5)
+#define DCS_POWER_MODE_IDLE_MODE		BIT(6)
+#define DCS_POWER_MODE_RESERVED_MASK		(BIT(0) | BIT(1) | BIT(7))
 
 /**
  * DOC: overview
@@ -67,16 +67,15 @@
  * mipi_dbi_spi_init().
  */
 
-#define MIPI_DBI_DEBUG_COMMAND(cmd, data, len)                             \
-	({                                                                 \
-		if (!len)                                                  \
-			DRM_DEBUG_DRIVER("cmd=%02x\n", cmd);               \
-		else if (len <= 32)                                        \
-			DRM_DEBUG_DRIVER("cmd=%02x, par=%*ph\n", cmd,      \
-					 (int)len, data);                  \
-		else                                                       \
-			DRM_DEBUG_DRIVER("cmd=%02x, len=%zu\n", cmd, len); \
-	})
+#define MIPI_DBI_DEBUG_COMMAND(cmd, data, len) \
+({ \
+	if (!len) \
+		DRM_DEBUG_DRIVER("cmd=%02x\n", cmd); \
+	else if (len <= 32) \
+		DRM_DEBUG_DRIVER("cmd=%02x, par=%*ph\n", cmd, (int)len, data);\
+	else \
+		DRM_DEBUG_DRIVER("cmd=%02x, len=%zu\n", cmd, len); \
+})
 
 static const u8 mipi_dbi_dcs_read_commands[] = {
 	MIPI_DCS_GET_DISPLAY_ID,
@@ -203,9 +202,9 @@ EXPORT_SYMBOL(mipi_dbi_command_stackbuf);
  * Returns:
  * Zero on success, negative error code on failure.
  */
-int mipi_dbi_buf_copy(void *dst, struct iosys_map *src,
-		      struct drm_framebuffer *fb, struct drm_rect *clip,
-		      bool swap, struct drm_format_conv_state *fmtcnv_state)
+int mipi_dbi_buf_copy(void *dst, struct iosys_map *src, struct drm_framebuffer *fb,
+		      struct drm_rect *clip, bool swap,
+		      struct drm_format_conv_state *fmtcnv_state)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	struct drm_gem_object *gem = drm_gem_fb_get_obj(fb, 0);
@@ -219,8 +218,8 @@ int mipi_dbi_buf_copy(void *dst, struct iosys_map *src,
 	switch (fb->format->format) {
 	case DRM_FORMAT_RGB565:
 		if (swap)
-			drm_fb_swab(&dst_map, NULL, src, fb, clip,
-				    !gem->import_attach, fmtcnv_state);
+			drm_fb_swab(&dst_map, NULL, src, fb, clip, !gem->import_attach,
+				    fmtcnv_state);
 		else
 			drm_fb_memcpy(&dst_map, NULL, src, fb, clip);
 		break;
@@ -230,12 +229,10 @@ int mipi_dbi_buf_copy(void *dst, struct iosys_map *src,
 	case DRM_FORMAT_XRGB8888:
 		switch (dbidev->pixel_format) {
 		case DRM_FORMAT_RGB565:
-			drm_fb_xrgb8888_to_rgb565(&dst_map, NULL, src, fb, clip,
-						  fmtcnv_state, swap);
+			drm_fb_xrgb8888_to_rgb565(&dst_map, NULL, src, fb, clip, fmtcnv_state, swap);
 			break;
 		case DRM_FORMAT_RGB888:
-			drm_fb_xrgb8888_to_rgb888(&dst_map, NULL, src, fb, clip,
-						  fmtcnv_state);
+			drm_fb_xrgb8888_to_rgb888(&dst_map, NULL, src, fb, clip, fmtcnv_state);
 			break;
 		}
 		break;
@@ -269,8 +266,7 @@ static void mipi_dbi_set_window_address(struct mipi_dbi_dev *dbidev,
 }
 
 static void mipi_dbi_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
-			      struct drm_rect *rect,
-			      struct drm_format_conv_state *fmtcnv_state)
+			      struct drm_rect *rect, struct drm_format_conv_state *fmtcnv_state)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(fb->dev);
 	unsigned int height = rect->y2 - rect->y1;
@@ -285,8 +281,7 @@ static void mipi_dbi_fb_dirty(struct iosys_map *src, struct drm_framebuffer *fb,
 
 	full = width == fb->width && height == fb->height;
 
-	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id,
-		      DRM_RECT_ARG(rect));
+	DRM_DEBUG_KMS("Flushing [FB:%d] " DRM_RECT_FMT "\n", fb->base.id, DRM_RECT_ARG(rect));
 
 	if (!dbi->dc || !full || swap ||
 	    fb->format->format == DRM_FORMAT_XRGB8888) {
@@ -322,14 +317,12 @@ err_msg:
  * display. Drivers can use this as their &drm_simple_display_pipe_funcs->mode_valid
  * callback.
  */
-enum drm_mode_status
-mipi_dbi_pipe_mode_valid(struct drm_simple_display_pipe *pipe,
-			 const struct drm_display_mode *mode)
+enum drm_mode_status mipi_dbi_pipe_mode_valid(struct drm_simple_display_pipe *pipe,
+					      const struct drm_display_mode *mode)
 {
 	struct mipi_dbi_dev *dbidev = drm_to_mipi_dbi_dev(pipe->crtc.dev);
 
-	return drm_crtc_helper_mode_valid_fixed(&pipe->crtc, mode,
-						&dbidev->mode);
+	return drm_crtc_helper_mode_valid_fixed(&pipe->crtc, mode, &dbidev->mode);
 }
 EXPORT_SYMBOL(mipi_dbi_pipe_mode_valid);
 
@@ -345,8 +338,7 @@ void mipi_dbi_pipe_update(struct drm_simple_display_pipe *pipe,
 			  struct drm_plane_state *old_state)
 {
 	struct drm_plane_state *state = pipe->plane.state;
-	struct drm_shadow_plane_state *shadow_plane_state =
-		to_drm_shadow_plane_state(state);
+	struct drm_shadow_plane_state *shadow_plane_state = to_drm_shadow_plane_state(state);
 	struct drm_framebuffer *fb = state->fb;
 	struct drm_rect rect;
 	int idx;
@@ -385,8 +377,7 @@ void mipi_dbi_enable_flush(struct mipi_dbi_dev *dbidev,
 			   struct drm_crtc_state *crtc_state,
 			   struct drm_plane_state *plane_state)
 {
-	struct drm_shadow_plane_state *shadow_plane_state =
-		to_drm_shadow_plane_state(plane_state);
+	struct drm_shadow_plane_state *shadow_plane_state = to_drm_shadow_plane_state(plane_state);
 	struct drm_framebuffer *fb = plane_state->fb;
 	struct drm_rect rect = {
 		.x1 = 0,
@@ -519,8 +510,7 @@ EXPORT_SYMBOL(mipi_dbi_pipe_reset_plane);
  * Returns:
  * A pointer to a new plane state on success, or NULL otherwise.
  */
-struct drm_plane_state *
-mipi_dbi_pipe_duplicate_plane_state(struct drm_simple_display_pipe *pipe)
+struct drm_plane_state *mipi_dbi_pipe_duplicate_plane_state(struct drm_simple_display_pipe *pipe)
 {
 	return drm_gem_duplicate_shadow_plane_state(&pipe->plane);
 }
@@ -613,15 +603,16 @@ static const uint32_t mipi_dbi_formats[] = {
  * Returns:
  * Zero on success, negative error code on failure.
  */
-int mipi_dbi_dev_init_with_formats(
-	struct mipi_dbi_dev *dbidev,
-	const struct drm_simple_display_pipe_funcs *funcs,
-	const uint32_t *formats, unsigned int format_count,
-	const struct drm_display_mode *mode, unsigned int rotation,
-	size_t tx_buf_size)
+int mipi_dbi_dev_init_with_formats(struct mipi_dbi_dev *dbidev,
+				   const struct drm_simple_display_pipe_funcs *funcs,
+				   const uint32_t *formats, unsigned int format_count,
+				   const struct drm_display_mode *mode,
+				   unsigned int rotation, size_t tx_buf_size)
 {
-	static const uint64_t modifiers[] = { DRM_FORMAT_MOD_LINEAR,
-					      DRM_FORMAT_MOD_INVALID };
+	static const uint64_t modifiers[] = {
+		DRM_FORMAT_MOD_LINEAR,
+		DRM_FORMAT_MOD_INVALID
+	};
 	struct drm_device *drm = &dbidev->drm;
 	int ret;
 
@@ -643,17 +634,14 @@ int mipi_dbi_dev_init_with_formats(
 		return -EINVAL;
 	}
 
-	drm_connector_helper_add(&dbidev->connector,
-				 &mipi_dbi_connector_hfuncs);
-	ret = drm_connector_init(drm, &dbidev->connector,
-				 &mipi_dbi_connector_funcs,
+	drm_connector_helper_add(&dbidev->connector, &mipi_dbi_connector_hfuncs);
+	ret = drm_connector_init(drm, &dbidev->connector, &mipi_dbi_connector_funcs,
 				 DRM_MODE_CONNECTOR_SPI);
 	if (ret)
 		return ret;
 
-	ret = drm_simple_display_pipe_init(drm, &dbidev->pipe, funcs, formats,
-					   format_count, modifiers,
-					   &dbidev->connector);
+	ret = drm_simple_display_pipe_init(drm, &dbidev->pipe, funcs, formats, format_count,
+					   modifiers, &dbidev->connector);
 	if (ret)
 		return ret;
 
@@ -694,16 +682,15 @@ EXPORT_SYMBOL(mipi_dbi_dev_init_with_formats);
  */
 int mipi_dbi_dev_init(struct mipi_dbi_dev *dbidev,
 		      const struct drm_simple_display_pipe_funcs *funcs,
-		      const struct drm_display_mode *mode,
-		      unsigned int rotation)
+		      const struct drm_display_mode *mode, unsigned int rotation)
 {
 	size_t bufsize = mode->vdisplay * mode->hdisplay * sizeof(u16);
 
 	dbidev->drm.mode_config.preferred_depth = 16;
 
 	return mipi_dbi_dev_init_with_formats(dbidev, funcs, mipi_dbi_formats,
-					      ARRAY_SIZE(mipi_dbi_formats),
-					      mode, rotation, bufsize);
+					      ARRAY_SIZE(mipi_dbi_formats), mode,
+					      rotation, bufsize);
 }
 EXPORT_SYMBOL(mipi_dbi_dev_init);
 
@@ -747,9 +734,8 @@ bool mipi_dbi_display_is_on(struct mipi_dbi *dbi)
 	val &= ~DCS_POWER_MODE_RESERVED_MASK;
 
 	/* The poweron/reset value is 08h DCS_POWER_MODE_DISPLAY_NORMAL_MODE */
-	if (val !=
-	    (DCS_POWER_MODE_DISPLAY | DCS_POWER_MODE_DISPLAY_NORMAL_MODE |
-	     DCS_POWER_MODE_SLEEP_MODE))
+	if (val != (DCS_POWER_MODE_DISPLAY |
+	    DCS_POWER_MODE_DISPLAY_NORMAL_MODE | DCS_POWER_MODE_SLEEP_MODE))
 		return false;
 
 	DRM_DEBUG_DRIVER("Display is ON\n");
@@ -758,8 +744,7 @@ bool mipi_dbi_display_is_on(struct mipi_dbi *dbi)
 }
 EXPORT_SYMBOL(mipi_dbi_display_is_on);
 
-static int mipi_dbi_poweron_reset_conditional(struct mipi_dbi_dev *dbidev,
-					      bool cond)
+static int mipi_dbi_poweron_reset_conditional(struct mipi_dbi_dev *dbidev, bool cond)
 {
 	struct device *dev = dbidev->drm.dev;
 	struct mipi_dbi *dbi = &dbidev->dbi;
@@ -768,8 +753,7 @@ static int mipi_dbi_poweron_reset_conditional(struct mipi_dbi_dev *dbidev,
 	if (dbidev->regulator) {
 		ret = regulator_enable(dbidev->regulator);
 		if (ret) {
-			DRM_DEV_ERROR(dev, "Failed to enable regulator (%d)\n",
-				      ret);
+			DRM_DEV_ERROR(dev, "Failed to enable regulator (%d)\n", ret);
 			return ret;
 		}
 	}
@@ -777,9 +761,7 @@ static int mipi_dbi_poweron_reset_conditional(struct mipi_dbi_dev *dbidev,
 	if (dbidev->io_regulator) {
 		ret = regulator_enable(dbidev->io_regulator);
 		if (ret) {
-			DRM_DEV_ERROR(dev,
-				      "Failed to enable I/O regulator (%d)\n",
-				      ret);
+			DRM_DEV_ERROR(dev, "Failed to enable I/O regulator (%d)\n", ret);
 			if (dbidev->regulator)
 				regulator_disable(dbidev->regulator);
 			return ret;
@@ -944,13 +926,11 @@ static int mipi_dbi_spi1e_transfer(struct mipi_dbi *dbi, int dc,
 			if (swap_bytes) {
 				for (i = 1; i < (chunk + 1); i++) {
 					val = src[1];
-					*dst++ = carry | BIT(8 - i) |
-						 (val >> i);
+					*dst++ = carry | BIT(8 - i) | (val >> i);
 					carry = val << (8 - i);
 					i++;
 					val = src[0];
-					*dst++ = carry | BIT(8 - i) |
-						 (val >> i);
+					*dst++ = carry | BIT(8 - i) | (val >> i);
 					carry = val << (8 - i);
 					src += 2;
 				}
@@ -958,8 +938,7 @@ static int mipi_dbi_spi1e_transfer(struct mipi_dbi *dbi, int dc,
 			} else {
 				for (i = 1; i < (chunk + 1); i++) {
 					val = *src++;
-					*dst++ = carry | BIT(8 - i) |
-						 (val >> i);
+					*dst++ = carry | BIT(8 - i) | (val >> i);
 					carry = val << (8 - i);
 				}
 				*dst++ = carry;
@@ -970,35 +949,23 @@ static int mipi_dbi_spi1e_transfer(struct mipi_dbi *dbi, int dc,
 		} else {
 			for (i = 0; i < chunk; i += 8) {
 				if (swap_bytes) {
-					*dst++ = BIT(7) | (src[1] >> 1);
-					*dst++ = (src[1] << 7) | BIT(6) |
-						 (src[0] >> 2);
-					*dst++ = (src[0] << 6) | BIT(5) |
-						 (src[3] >> 3);
-					*dst++ = (src[3] << 5) | BIT(4) |
-						 (src[2] >> 4);
-					*dst++ = (src[2] << 4) | BIT(3) |
-						 (src[5] >> 5);
-					*dst++ = (src[5] << 3) | BIT(2) |
-						 (src[4] >> 6);
-					*dst++ = (src[4] << 2) | BIT(1) |
-						 (src[7] >> 7);
+					*dst++ =                 BIT(7) | (src[1] >> 1);
+					*dst++ = (src[1] << 7) | BIT(6) | (src[0] >> 2);
+					*dst++ = (src[0] << 6) | BIT(5) | (src[3] >> 3);
+					*dst++ = (src[3] << 5) | BIT(4) | (src[2] >> 4);
+					*dst++ = (src[2] << 4) | BIT(3) | (src[5] >> 5);
+					*dst++ = (src[5] << 3) | BIT(2) | (src[4] >> 6);
+					*dst++ = (src[4] << 2) | BIT(1) | (src[7] >> 7);
 					*dst++ = (src[7] << 1) | BIT(0);
 					*dst++ = src[6];
 				} else {
-					*dst++ = BIT(7) | (src[0] >> 1);
-					*dst++ = (src[0] << 7) | BIT(6) |
-						 (src[1] >> 2);
-					*dst++ = (src[1] << 6) | BIT(5) |
-						 (src[2] >> 3);
-					*dst++ = (src[2] << 5) | BIT(4) |
-						 (src[3] >> 4);
-					*dst++ = (src[3] << 4) | BIT(3) |
-						 (src[4] >> 5);
-					*dst++ = (src[4] << 3) | BIT(2) |
-						 (src[5] >> 6);
-					*dst++ = (src[5] << 2) | BIT(1) |
-						 (src[6] >> 7);
+					*dst++ =                 BIT(7) | (src[0] >> 1);
+					*dst++ = (src[0] << 7) | BIT(6) | (src[1] >> 2);
+					*dst++ = (src[1] << 6) | BIT(5) | (src[2] >> 3);
+					*dst++ = (src[2] << 5) | BIT(4) | (src[3] >> 4);
+					*dst++ = (src[3] << 4) | BIT(3) | (src[4] >> 5);
+					*dst++ = (src[4] << 3) | BIT(2) | (src[5] >> 6);
+					*dst++ = (src[5] << 2) | BIT(1) | (src[6] >> 7);
 					*dst++ = (src[6] << 1) | BIT(0);
 					*dst++ = src[7];
 				}
@@ -1018,8 +985,9 @@ static int mipi_dbi_spi1e_transfer(struct mipi_dbi *dbi, int dc,
 	return 0;
 }
 
-static int mipi_dbi_spi1_transfer(struct mipi_dbi *dbi, int dc, const void *buf,
-				  size_t len, unsigned int bpw)
+static int mipi_dbi_spi1_transfer(struct mipi_dbi *dbi, int dc,
+				  const void *buf, size_t len,
+				  unsigned int bpw)
 {
 	struct spi_device *spi = dbi->spi;
 	struct spi_transfer tr = {
@@ -1054,10 +1022,10 @@ static int mipi_dbi_spi1_transfer(struct mipi_dbi *dbi, int dc, const void *buf,
 
 		if (bpw == 16) {
 			for (i = 0; i < (chunk * 2); i += 2) {
-				dst16[i] = *src16 >> 8;
+				dst16[i]     = *src16 >> 8;
 				dst16[i + 1] = *src16++ & 0xFF;
 				if (dc) {
-					dst16[i] |= 0x0100;
+					dst16[i]     |= 0x0100;
 					dst16[i + 1] |= 0x0100;
 				}
 			}
@@ -1080,20 +1048,19 @@ static int mipi_dbi_spi1_transfer(struct mipi_dbi *dbi, int dc, const void *buf,
 	return 0;
 }
 
-static int mipi_dbi_typec1_command_read(struct mipi_dbi *dbi, u8 *cmd, u8 *data,
-					size_t len)
+static int mipi_dbi_typec1_command_read(struct mipi_dbi *dbi, u8 *cmd,
+					u8 *data, size_t len)
 {
 	struct spi_device *spi = dbi->spi;
-	u32 speed_hz =
-		min_t(u32, MIPI_DBI_MAX_SPI_READ_SPEED, spi->max_speed_hz / 2);
+	u32 speed_hz = min_t(u32, MIPI_DBI_MAX_SPI_READ_SPEED,
+			     spi->max_speed_hz / 2);
 	struct spi_transfer tr[2] = {
 		{
 			.speed_hz = speed_hz,
 			.bits_per_word = 9,
 			.tx_buf = dbi->tx_buf9,
 			.len = 2,
-		},
-		{
+		}, {
 			.speed_hz = speed_hz,
 			.bits_per_word = 8,
 			.len = len,
@@ -1157,19 +1124,18 @@ static int mipi_dbi_typec1_command(struct mipi_dbi *dbi, u8 *cmd,
 
 /* MIPI DBI Type C Option 3 */
 
-static int mipi_dbi_typec3_command_read(struct mipi_dbi *dbi, u8 *cmd, u8 *data,
-					size_t len)
+static int mipi_dbi_typec3_command_read(struct mipi_dbi *dbi, u8 *cmd,
+					u8 *data, size_t len)
 {
 	struct spi_device *spi = dbi->spi;
-	u32 speed_hz =
-		min_t(u32, MIPI_DBI_MAX_SPI_READ_SPEED, spi->max_speed_hz / 2);
+	u32 speed_hz = min_t(u32, MIPI_DBI_MAX_SPI_READ_SPEED,
+			     spi->max_speed_hz / 2);
 	struct spi_transfer tr[2] = {
 		{
 			.speed_hz = speed_hz,
 			.tx_buf = cmd,
 			.len = 1,
-		},
-		{
+		}, {
 			.speed_hz = speed_hz,
 			.len = len,
 		},
@@ -1225,8 +1191,8 @@ err_free:
 	return ret;
 }
 
-static int mipi_dbi_typec3_command(struct mipi_dbi *dbi, u8 *cmd, u8 *par,
-				   size_t num)
+static int mipi_dbi_typec3_command(struct mipi_dbi *dbi, u8 *cmd,
+				   u8 *par, size_t num)
 {
 	struct spi_device *spi = dbi->spi;
 	unsigned int bpw = 8;
@@ -1358,8 +1324,8 @@ EXPORT_SYMBOL(mipi_dbi_spi_init);
  * Returns:
  * Zero on success, negative error code on failure.
  */
-int mipi_dbi_spi_transfer(struct spi_device *spi, u32 speed_hz, u8 bpw,
-			  const void *buf, size_t len)
+int mipi_dbi_spi_transfer(struct spi_device *spi, u32 speed_hz,
+			  u8 bpw, const void *buf, size_t len)
 {
 	size_t max_chunk = spi_max_transfer_size(spi);
 	struct spi_transfer tr = {
@@ -1504,7 +1470,8 @@ static int mipi_dbi_debugfs_command_show(struct seq_file *m, void *unused)
 	return 0;
 }
 
-static int mipi_dbi_debugfs_command_open(struct inode *inode, struct file *file)
+static int mipi_dbi_debugfs_command_open(struct inode *inode,
+					 struct file *file)
 {
 	return single_open(file, mipi_dbi_debugfs_command_show,
 			   inode->i_private);
