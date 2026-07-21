@@ -30,7 +30,10 @@ https://github.com/user-attachments/assets/9526318e-5c00-406e-a91f-2dd308e9b231
 ## TODOs: 待办事项
 
 - [x] 支持 TE 引脚，防止画面撕裂
-- [ ] 支持旋转
+- [ ] 添加电源管理接口 system & runtime
+- [ ] 优化 "fb_dirty" 格式转换以及像素刷新逻辑
+- [ ] 支持更多参数设置,例如刷新率等
+- [ ] 支持屏幕旋转
 
 ## 快速上手
 
